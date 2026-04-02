@@ -10,9 +10,9 @@
 
 ---
 
-# 当前开发状态（2026-04-02）
+# 当前开发状态（2026-04-03）
 
-目前 **Phase 1、Phase 2 和 Phase 3 已完成**，仓库已经落地了一个可运行的前端骨架、基础画布和只读 Markdown 面板，具体包括：
+目前 **Phase 1、Phase 2、Phase 3 和 Phase 4 已完成**，仓库已经落地了一个可运行的前端骨架、基础画布、只读 Markdown 面板和可操作工具栏，具体包括：
 
 * `Vite + React + TypeScript` 工程初始化完成
 * 三栏桌面布局已实现，左右分隔条可拖拽调整宽度
@@ -30,16 +30,20 @@
 * 节点选中后，左侧信息区和右侧标题区会同步联动
 * 已接入 `react-markdown + remark-gfm + remark-math + rehype-katex + katex`
 * 右侧已支持只读 Markdown 渲染，包含 GFM 表格、任务列表、代码块和 LaTeX 公式
+* 左侧已支持 `新建节点 / 删除选中节点 / Fit View / Zoom In / Zoom Out / Center Selected`
+* 左侧已支持 `导出 JSON / 导入 JSON / 重置默认图谱`
+* 已支持导入图谱结构校验与错误提示
+* 图谱数据已写入 `localStorage`，刷新后可恢复节点、边、note 内容与节点位置
 * 已补充本地运行说明 `README.md`
 * 已通过基础自动化测试和构建验证
 
 当前**还没有接入**：
 
-* 节点/边增删改
-* 图谱数据持久化
-* JSON 导入导出
+* 更复杂的图谱编辑（如连线创建、节点编辑）
+* 视图状态持久化（如缩放级别、平移位置）
+* 自动布局
 
-因此，下面的内容仍然是**后续阶段规划**，但其中的 Phase 1、Phase 2 和 Phase 3 已经进入“已完成”状态。
+因此，下面的内容仍然是**后续阶段规划**，但其中的 Phase 1、Phase 2、Phase 3 和 Phase 4 已经进入“已完成”状态。
 
 ---
 
@@ -420,7 +424,7 @@ Markdown 正文单独存在 `notes[noteId]` 里。
 
 * 已更新 `selectedNodeId`
 * 已联动右栏标题和 `noteId`
-* Markdown 正文渲染仍留在 Phase 3
+* 已联动 Markdown 正文渲染
 
 ## 新建节点行为
 
@@ -735,17 +739,20 @@ base: '/仓库名/'
 * 已完成 `react-markdown + katex`
 * 已完成 GFM 与 LaTeX 只读渲染
 
-## Phase 4：左栏功能
+## Phase 4：左栏功能（已完成）
 
-* 新建节点
-* 删除节点
-* fit view
-* 导出/导入
+* 已完成新建节点
+* 已完成删除选中节点
+* 已完成 `Fit View`
+* 已完成 `Zoom In / Zoom Out / Center Selected`
+* 已完成导出/导入 JSON
+* 已完成重置默认图谱
 
-## Phase 5：持久化
+## Phase 5：持久化（基础能力已完成）
 
-* localStorage 自动保存
-* 页面刷新恢复
+* 已完成图谱 `localStorage` 自动保存
+* 已完成页面刷新恢复
+* 后续可继续补视图状态持久化
 
 ## Phase 6：打磨
 
@@ -765,11 +772,11 @@ base: '/仓库名/'
 * [x] 页面有三栏，可拖动调整宽度
 * [x] 支持 `ABC / ACB / CBA / BCA` 四种固定布局
 * [x] 中间可显示 React Flow 图
-* [ ] 左边点按钮可新建节点
+* [x] 左边点按钮可新建节点
 * [x] 点击节点后右边显示节点标题与 `noteId`
 * [x] Markdown 支持公式
-* [ ] 数据可自动保存在本地（当前仅布局、主题状态保存在本地）
-* [ ] 可导出/导入 JSON
+* [x] 数据可自动保存在本地
+* [x] 可导出/导入 JSON
 * [ ] 可部署到 GitHub Pages
 
 做到这里，这个项目其实已经很好用了。

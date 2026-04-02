@@ -21,3 +21,20 @@ export type GraphState = {
   notes: Record<string, NoteRecord>;
   selectedNodeId: string | null;
 };
+
+export type PersistedGraphState = {
+  version: 1;
+  nodes: KnowledgeNode[];
+  edges: KnowledgeEdge[];
+  notes: Record<string, NoteRecord>;
+};
+
+export type ExportedGraphData = PersistedGraphState;
+
+export type CanvasViewportApi = {
+  fitView: () => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
+  centerOnNode: (node: KnowledgeNode) => void;
+  getCanvasCenterPosition: () => { x: number; y: number };
+};

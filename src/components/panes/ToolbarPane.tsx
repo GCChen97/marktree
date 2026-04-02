@@ -1,5 +1,6 @@
 import type { LayoutMode } from '../../types/layout';
 import type { ThemeMode } from '../../types/theme';
+import { useRef } from 'react';
 
 type ToolbarInfo = {
   nodeCount: number;
@@ -13,6 +14,18 @@ type ToolbarPaneProps = {
   theme: ThemeMode;
   onThemeToggle: () => void;
   info: ToolbarInfo;
+  onCreateNode: () => void;
+  onDeleteSelectedNode: () => void;
+  onFitView: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onCenterSelected: () => void;
+  onResetGraph: () => void;
+  onExportGraph: () => void;
+  onImportGraph: (file: File) => void;
+  canDeleteSelectedNode: boolean;
+  canCenterSelected: boolean;
+  importError: string | null;
 };
 
 const layoutOptions: Array<{ mode: LayoutMode; label: string }> = [
@@ -28,14 +41,28 @@ export function ToolbarPane({
   theme,
   onThemeToggle,
   info,
+  onCreateNode,
+  onDeleteSelectedNode,
+  onFitView,
+  onZoomIn,
+  onZoomOut,
+  onCenterSelected,
+  onResetGraph,
+  onExportGraph,
+  onImportGraph,
+  canDeleteSelectedNode,
+  canCenterSelected,
+  importError,
 }: ToolbarPaneProps) {
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+
   return (
     <div className="pane-content pane-content--toolbar">
       <header className="pane-header">
-        <p className="pane-eyebrow">Phase 2</p>
+        <p className="pane-eyebrow">Phase 4</p>
         <h1 className="pane-title">MyMind Workspace</h1>
         <p className="pane-description">
-          当前已经进入画布阶段，重点验证 React Flow 接入、节点选中联动和三栏协作是否顺畅。
+          左栏现在负责图谱管理、视图控制与本地图谱持久化。
         </p>
       </header>
 
@@ -115,29 +142,85 @@ export function ToolbarPane({
 
       <section className="toolbar-section">
         <h2 className="section-title">图谱操作</h2>
-        <ul className="placeholder-list">
-          <li>新建节点</li>
-          <li>删除选中节点</li>
-          <li>自动布局入口</li>
-        </ul>
+        <div className="toolbar-action-list">
+          <button className="toolbar-action-button" onClick={onCreateNode} type="button">
+            新建节点
+          </button>
+          <button
+            className="toolbar-action-button"
+            disabled={!canDeleteSelectedNode}
+            onClick={onDeleteSelectedNode}
+            type="button"
+          >
+            删除选中节点
+          </button>
+        </div>
       </section>
 
       <section className="toolbar-section">
         <h2 className="section-title">视图操作</h2>
-        <ul className="placeholder-list">
-          <li>Fit View</li>
-          <li>Zoom In / Zoom Out</li>
-          <li>Center Selected</li>
-        </ul>
+        <div className="toolbar-action-list">
+          <button className="toolbar-action-button" onClick={onFitView} type="button">
+            Fit View
+          </button>
+          <button className="toolbar-action-button" onClick={onZoomIn} type="button">
+            Zoom In
+          </button>
+          <button className="toolbar-action-button" onClick={onZoomOut} type="button">
+            Zoom Out
+          </button>
+          <button
+            className="toolbar-action-button"
+            disabled={!canCenterSelected}
+            onClick={onCenterSelected}
+            type="button"
+          >
+            Center Selected
+          </button>
+        </div>
       </section>
 
       <section className="toolbar-section">
         <h2 className="section-title">数据操作</h2>
-        <ul className="placeholder-list">
-          <li>导出 JSON</li>
-          <li>导入 JSON</li>
-          <li>重置默认图谱</li>
-        </ul>
+        <div className="toolbar-action-list">
+          <button
+            className="toolbar-action-button"
+            onClick={onExportGraph}
+            type="button"
+          >
+            导出 JSON
+          </button>
+          <button
+            className="toolbar-action-button"
+            onClick={() => importInputRef.current?.click()}
+            type="button"
+          >
+            导入 JSON
+          </button>
+          <button
+            className="toolbar-action-button"
+            onClick={onResetGraph}
+            type="button"
+          >
+            重置默认图谱
+          </button>
+          <input
+            accept=".json,application/json"
+            className="visually-hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+
+              if (file) {
+                onImportGraph(file);
+              }
+
+              event.currentTarget.value = '';
+            }}
+            ref={importInputRef}
+            type="file"
+          />
+        </div>
+        {importError ? <p className="toolbar-feedback">{importError}</p> : null}
       </section>
 
       <section className="toolbar-section">

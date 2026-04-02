@@ -1,8 +1,11 @@
 import type { LayoutMode } from '../../types/layout';
+import type { ThemeMode } from '../../types/theme';
 
 type ToolbarPaneProps = {
   mode: LayoutMode;
   onModeChange: (mode: LayoutMode) => void;
+  theme: ThemeMode;
+  onThemeToggle: () => void;
 };
 
 const layoutOptions: Array<{ mode: LayoutMode; label: string }> = [
@@ -12,7 +15,12 @@ const layoutOptions: Array<{ mode: LayoutMode; label: string }> = [
   { mode: 'BCA', label: 'BCA' },
 ];
 
-export function ToolbarPane({ mode, onModeChange }: ToolbarPaneProps) {
+export function ToolbarPane({
+  mode,
+  onModeChange,
+  theme,
+  onThemeToggle,
+}: ToolbarPaneProps) {
   return (
     <div className="pane-content pane-content--toolbar">
       <header className="pane-header">
@@ -23,6 +31,41 @@ export function ToolbarPane({ mode, onModeChange }: ToolbarPaneProps) {
           React Flow 与 Markdown 详情。
         </p>
       </header>
+
+      <section className="toolbar-section">
+        <div className="section-heading-row">
+          <h2 className="section-title">外观主题</h2>
+          <span className="section-badge">
+            {theme === 'night' ? '夜晚' : '白天'}
+          </span>
+        </div>
+        <p className="section-copy">
+          当前提供一键切换的夜晚主题，保留同一套柔和配色和玻璃感面板。
+        </p>
+        <label className="theme-switch" htmlFor="theme-toggle">
+          <span className="theme-switch__copy">
+            <strong>夜晚主题</strong>
+            <span>
+              {theme === 'night'
+                ? '适合低光环境，降低页面整体亮度。'
+                : '保留当前清爽主题，适合白天浏览。'}
+            </span>
+          </span>
+          <span className="theme-switch__control">
+            <input
+              checked={theme === 'night'}
+              className="theme-switch__input"
+              id="theme-toggle"
+              onChange={onThemeToggle}
+              role="switch"
+              type="checkbox"
+            />
+            <span aria-hidden="true" className="theme-switch__track">
+              <span className="theme-switch__thumb" />
+            </span>
+          </span>
+        </label>
+      </section>
 
       <section className="toolbar-section">
         <div className="section-heading-row">
@@ -41,19 +84,23 @@ export function ToolbarPane({ mode, onModeChange }: ToolbarPaneProps) {
           {layoutOptions.map((option) => (
             <button
               aria-pressed={option.mode === mode}
+              aria-label={`切换到 ${option.label} 布局`}
               className="mode-button"
               data-active={option.mode === mode}
               key={option.mode}
               onClick={() => onModeChange(option.mode)}
+              title={
+                option.mode === 'ABC'
+                  ? '工具栏 | 画布 | Markdown'
+                  : option.mode === 'ACB'
+                    ? '工具栏 | Markdown | 画布'
+                    : option.mode === 'CBA'
+                      ? 'Markdown | 画布 | 工具栏'
+                      : '画布 | Markdown | 工具栏'
+              }
               type="button"
             >
               <span className="mode-button__label">{option.label}</span>
-              <span className="mode-button__hint">
-                {option.mode === 'ABC' && '工具栏 | 画布 | Markdown'}
-                {option.mode === 'ACB' && '工具栏 | Markdown | 画布'}
-                {option.mode === 'CBA' && 'Markdown | 画布 | 工具栏'}
-                {option.mode === 'BCA' && '画布 | Markdown | 工具栏'}
-              </span>
             </button>
           ))}
         </div>

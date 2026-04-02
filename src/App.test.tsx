@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import App from './App';
 import { LAYOUT_STORAGE_KEY } from './utils/layout';
+import { THEME_STORAGE_KEY } from './hooks/useThemePreference';
 
 function expectPaneOrder(testIds: string[]) {
   const elements = testIds.map((testId) => screen.getByTestId(testId));
@@ -16,6 +17,7 @@ function expectPaneOrder(testIds: string[]) {
 describe('App', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    document.documentElement.dataset.theme = 'day';
   });
 
   it('renders the default ABC layout with all panes visible', () => {
@@ -79,5 +81,23 @@ describe('App', () => {
         C: expect.any(Number),
       }),
     });
+  });
+
+  it('toggles to the night theme and persists the preference', () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('switch', { name: /夜晚主题/i }));
+
+    expect(document.documentElement.dataset.theme).toBe('night');
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('night');
+  });
+
+  it('restores the stored night theme on load', () => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'night');
+
+    render(<App />);
+
+    expect(document.documentElement.dataset.theme).toBe('night');
+    expect(screen.getByRole('switch', { name: /夜晚主题/i })).toBeChecked();
   });
 });

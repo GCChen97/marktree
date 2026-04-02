@@ -521,6 +521,8 @@ button {
   display: grid;
   align-content: start;
   gap: var(--space-3);
+  min-height: 0;
+  overflow: auto;
   padding: 24px;
 }
 
@@ -528,6 +530,130 @@ button {
   margin: 0;
   color: var(--text-muted);
   line-height: 1.75;
+}
+
+.markdown-empty-state {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.markdown-prose {
+  color: var(--text);
+  line-height: 1.75;
+}
+
+.markdown-prose > :first-child {
+  margin-top: 0;
+}
+
+.markdown-prose > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-prose h1,
+.markdown-prose h2,
+.markdown-prose h3 {
+  margin: 1.4em 0 0.6em;
+  line-height: 1.2;
+}
+
+.markdown-prose h1 {
+  font-size: 1.75rem;
+}
+
+.markdown-prose h2 {
+  font-size: 1.3rem;
+}
+
+.markdown-prose h3 {
+  font-size: 1.08rem;
+}
+
+.markdown-prose p,
+.markdown-prose ul,
+.markdown-prose ol,
+.markdown-prose blockquote,
+.markdown-prose pre,
+.markdown-prose table {
+  margin: 0 0 1rem;
+}
+
+.markdown-prose ul,
+.markdown-prose ol {
+  padding-left: 1.4rem;
+}
+
+.markdown-prose li + li {
+  margin-top: 0.35rem;
+}
+
+.markdown-prose blockquote {
+  padding: 0.8rem 1rem;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  border-radius: 0 12px 12px 0;
+  background: color-mix(in srgb, var(--accent-soft) 34%, transparent);
+  color: var(--text-muted);
+}
+
+.markdown-prose code {
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-strong) 70%, transparent);
+  font-size: 0.92em;
+}
+
+.markdown-prose pre {
+  overflow: auto;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel-strong) 82%, transparent);
+}
+
+.markdown-prose pre code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.markdown-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.markdown-prose th,
+.markdown-prose td {
+  padding: 0.75rem 0.85rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown-prose th {
+  background: color-mix(in srgb, var(--panel-strong) 84%, transparent);
+}
+
+.markdown-prose tr:last-child td {
+  border-bottom: 0;
+}
+
+.markdown-prose .task-list-item {
+  list-style: none;
+}
+
+.markdown-prose .task-list-item input {
+  margin-right: 0.55rem;
+}
+
+.markdown-prose .katex-display {
+  margin: 1.1rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.3rem 0;
 }
 
 .layout-resize-handle {

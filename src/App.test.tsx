@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import App from './App';
+import { MarkdownPane } from './components/panes/MarkdownPane';
 import { LAYOUT_STORAGE_KEY } from './utils/layout';
 import { THEME_STORAGE_KEY } from './hooks/useThemePreference';
+import type { KnowledgeNode } from './types/graph';
 
 function expectPaneOrder(testIds: string[]) {
   const elements = testIds.map((testId) => screen.getByTestId(testId));
@@ -120,6 +122,7 @@ describe('App', () => {
 
     expect(screen.getByText('note_graph')).toBeInTheDocument();
     expect(screen.getAllByText('Knowledge Graph').length).toBeGreaterThan(1);
+    expect(screen.getByText('节点承载概念')).toBeInTheDocument();
   });
 
   it('clears the selected node when clicking the empty canvas pane', () => {
@@ -130,5 +133,38 @@ describe('App', () => {
 
     expect(screen.getByText('未选择节点')).toBeInTheDocument();
     expect(screen.getAllByText('未选择').length).toBeGreaterThan(0);
+    expect(screen.getByText('请选择一个节点。')).toBeInTheDocument();
+  });
+
+  it('renders markdown features from the selected note', () => {
+    render(<App />);
+
+    fireEvent.click(getFlowNodeByLabel('React Flow'));
+
+    expect(screen.getByText('节点拖拽')).toBeInTheDocument();
+    expect(
+      screen.getByText('<ReactFlow nodes={nodes} edges={edges} fitView />'),
+    ).toBeInTheDocument();
+    expect(document.querySelector('.katex')).not.toBeNull();
+
+    fireEvent.click(getFlowNodeByLabel('Markdown Pane'));
+    expect(screen.getByText('能力')).toBeInTheDocument();
+  });
+
+  it('shows a friendly message when a selected node has no note content', () => {
+    const selectedNode: KnowledgeNode = {
+      id: 'node_missing',
+      position: { x: 0, y: 0 },
+      data: {
+        title: 'Missing Note',
+        noteId: 'note_missing',
+      },
+    };
+
+    render(<MarkdownPane selectedNode={selectedNode} selectedNote={null} />);
+
+    expect(screen.getByText('Missing Note')).toBeInTheDocument();
+    expect(screen.getByText('note_missing')).toBeInTheDocument();
+    expect(screen.getByText('找不到对应的 note 内容。')).toBeInTheDocument();
   });
 });

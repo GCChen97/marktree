@@ -6,7 +6,7 @@ import { ThreePaneLayout } from './components/layout/ThreePaneLayout';
 import { createDefaultGraphState } from './data/defaultGraph';
 import { usePersistentLayoutState } from './hooks/usePersistentLayoutState';
 import { useThemePreference } from './hooks/useThemePreference';
-import type { KnowledgeEdge, KnowledgeNode } from './types/graph';
+import type { KnowledgeEdge, KnowledgeNode, NoteRecord } from './types/graph';
 
 function App() {
   const { mode, sizes, setMode, setSizes } = usePersistentLayoutState();
@@ -17,6 +17,13 @@ function App() {
     () => graph.nodes.find((node) => node.id === graph.selectedNodeId) ?? null,
     [graph.nodes, graph.selectedNodeId],
   );
+  const selectedNote = useMemo<NoteRecord | null>(() => {
+    if (!selectedNode) {
+      return null;
+    }
+
+    return graph.notes[selectedNode.data.noteId] ?? null;
+  }, [graph.notes, selectedNode]);
 
   function handleNodesChange(nodes: KnowledgeNode[]) {
     setGraph((currentGraph) => ({
@@ -69,7 +76,12 @@ function App() {
               selectedNodeId={graph.selectedNodeId}
             />
           ),
-          C: <MarkdownPane selectedNode={selectedNode} />,
+          C: (
+            <MarkdownPane
+              selectedNode={selectedNode}
+              selectedNote={selectedNote}
+            />
+          ),
         }}
       />
     </div>

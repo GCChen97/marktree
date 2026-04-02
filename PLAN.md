@@ -12,7 +12,7 @@
 
 # 当前开发状态（2026-04-02）
 
-目前 **Phase 1 和 Phase 2 已完成**，仓库已经落地了一个可运行的前端骨架和基础画布，具体包括：
+目前 **Phase 1、Phase 2 和 Phase 3 已完成**，仓库已经落地了一个可运行的前端骨架、基础画布和只读 Markdown 面板，具体包括：
 
 * `Vite + React + TypeScript` 工程初始化完成
 * 三栏桌面布局已实现，左右分隔条可拖拽调整宽度
@@ -28,17 +28,18 @@
 * 已内置一组 demo 图谱数据：3 个节点、2 条边
 * 已支持节点拖拽、缩放、平移和点击选中
 * 节点选中后，左侧信息区和右侧标题区会同步联动
+* 已接入 `react-markdown + remark-gfm + remark-math + rehype-katex + katex`
+* 右侧已支持只读 Markdown 渲染，包含 GFM 表格、任务列表、代码块和 LaTeX 公式
 * 已补充本地运行说明 `README.md`
 * 已通过基础自动化测试和构建验证
 
 当前**还没有接入**：
 
-* Markdown 渲染与 LaTeX
 * 节点/边增删改
 * 图谱数据持久化
 * JSON 导入导出
 
-因此，下面的内容仍然是**后续阶段规划**，但其中的 Phase 1 和 Phase 2 已经进入“已完成”状态。
+因此，下面的内容仍然是**后续阶段规划**，但其中的 Phase 1、Phase 2 和 Phase 3 已经进入“已完成”状态。
 
 ---
 
@@ -448,7 +449,8 @@ Markdown 正文单独存在 `notes[noteId]` 里。
 
 * 已显示选中节点标题
 * 已显示对应 `noteId`
-* 正文仍为 Phase 3 占位说明
+* 已显示对应 note 的 Markdown 正文
+* 已支持 GFM 与 LaTeX 只读渲染
 
 ## 主体
 
@@ -729,8 +731,9 @@ base: '/仓库名/'
 
 ## Phase 3：Markdown
 
-* 右栏根据选中节点显示 markdown
-* 接入 `react-markdown + katex`
+* 已完成右栏根据选中节点显示 markdown
+* 已完成 `react-markdown + katex`
+* 已完成 GFM 与 LaTeX 只读渲染
 
 ## Phase 4：左栏功能
 
@@ -764,7 +767,7 @@ base: '/仓库名/'
 * [x] 中间可显示 React Flow 图
 * [ ] 左边点按钮可新建节点
 * [x] 点击节点后右边显示节点标题与 `noteId`
-* [ ] Markdown 支持公式
+* [x] Markdown 支持公式
 * [ ] 数据可自动保存在本地（当前仅布局、主题状态保存在本地）
 * [ ] 可导出/导入 JSON
 * [ ] 可部署到 GitHub Pages

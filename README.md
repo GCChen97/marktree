@@ -1,6 +1,13 @@
 # MyMind
 
-本项目当前是 Phase 1 骨架版本，使用 `Vite + React + TypeScript` 搭建。
+本项目当前已完成 Phase 1 到 Phase 3，使用 `Vite + React + TypeScript` 搭建。
+
+当前已具备：
+
+- 三栏桌面布局，支持宽度拖拽和 `ABC / ACB / CBA / BCA` 四种固定布局
+- 中间 `React Flow` 画布，支持节点拖拽、缩放、平移和选中
+- 右侧只读 Markdown 面板，支持 GFM 与 LaTeX
+- 白天 / 夜晚主题切换
 
 ## 在本地查看网页
 

@@ -12,7 +12,7 @@
 
 # 当前开发状态（2026-04-02）
 
-目前 **Phase 1 已完成**，仓库已经落地了一个可运行的前端骨架，具体包括：
+目前 **Phase 1 和 Phase 2 已完成**，仓库已经落地了一个可运行的前端骨架和基础画布，具体包括：
 
 * `Vite + React + TypeScript` 工程初始化完成
 * 三栏桌面布局已实现，左右分隔条可拖拽调整宽度
@@ -23,19 +23,22 @@
   * `BCA`：画布 | Markdown | 工具栏
 * 工具栏 `A` 始终固定在最左或最右，`B` 与 `C` 可以互换左右
 * 当前布局模式和三栏宽度已写入 `localStorage`
-* 已有 `ToolbarPane / CanvasPane / MarkdownPane` 三个独立 pane 占位组件
+* 已有 `ToolbarPane / CanvasPane / MarkdownPane` 三个独立 pane 组件
+* 已接入 `@xyflow/react`，中栏可显示真实节点画布
+* 已内置一组 demo 图谱数据：3 个节点、2 条边
+* 已支持节点拖拽、缩放、平移和点击选中
+* 节点选中后，左侧信息区和右侧标题区会同步联动
 * 已补充本地运行说明 `README.md`
 * 已通过基础自动化测试和构建验证
 
 当前**还没有接入**：
 
-* React Flow 节点画布
 * Markdown 渲染与 LaTeX
-* 图谱数据模型
 * 节点/边增删改
+* 图谱数据持久化
 * JSON 导入导出
 
-因此，下面的内容仍然是**后续阶段规划**，但其中的 Phase 1 已经进入“已完成”状态。
+因此，下面的内容仍然是**后续阶段规划**，但其中的 Phase 1 和 Phase 2 已经进入“已完成”状态。
 
 ---
 
@@ -399,11 +402,24 @@ Markdown 正文单独存在 `notes[noteId]` 里。
 * MiniMap（第一版可选）
 * Controls（可选）
 
+当前实现状态：
+
+* 已接入 React Flow 默认节点
+* 已有固定 demo 数据：3 个节点、2 条边
+* 已支持拖拽、缩放、平移、点击选中
+* 当前还没有启用 `Controls / Background / MiniMap`
+
 ## 点击节点行为
 
 * 更新 `selectedNodeId`
 * 右侧 MarkdownPane 读取对应 `noteId`
 * 展示该笔记内容
+
+当前实现状态：
+
+* 已更新 `selectedNodeId`
+* 已联动右栏标题和 `noteId`
+* Markdown 正文渲染仍留在 Phase 3
 
 ## 新建节点行为
 
@@ -427,6 +443,12 @@ Markdown 正文单独存在 `notes[noteId]` 里。
 * 节点标题
 * noteId 或 tag
 * 编辑/只读切换按钮（可选）
+
+当前实现状态：
+
+* 已显示选中节点标题
+* 已显示对应 `noteId`
+* 正文仍为 Phase 3 占位说明
 
 ## 主体
 
@@ -698,11 +720,12 @@ base: '/仓库名/'
 * 已实现三栏宽度拖拽与 `localStorage` 持久化
 * 已补齐基础测试与构建验证
 
-## Phase 2：画布
+## Phase 2：画布（已完成）
 
-* React Flow 接入
-* 节点/边初始数据
-* 节点点击选中
+* 已完成 React Flow 接入
+* 已完成节点/边初始数据
+* 已完成节点点击选中
+* 已完成左侧信息区与右侧标题区联动
 
 ## Phase 3：Markdown
 
@@ -738,11 +761,11 @@ base: '/仓库名/'
 
 * [x] 页面有三栏，可拖动调整宽度
 * [x] 支持 `ABC / ACB / CBA / BCA` 四种固定布局
-* [ ] 中间可显示 React Flow 图
+* [x] 中间可显示 React Flow 图
 * [ ] 左边点按钮可新建节点
-* [ ] 点击节点后右边显示 Markdown
+* [x] 点击节点后右边显示节点标题与 `noteId`
 * [ ] Markdown 支持公式
-* [ ] 数据可自动保存在本地（当前仅布局状态保存在本地）
+* [ ] 数据可自动保存在本地（当前仅布局、主题状态保存在本地）
 * [ ] 可导出/导入 JSON
 * [ ] 可部署到 GitHub Pages
 

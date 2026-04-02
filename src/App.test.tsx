@@ -14,6 +14,13 @@ function expectPaneOrder(testIds: string[]) {
   }
 }
 
+function getFlowNodeByLabel(label: string) {
+  return screen
+    .getAllByText(label)
+    .find((element) => element.closest('.react-flow__node'))!
+    .closest('.react-flow__node') as HTMLElement;
+}
+
 describe('App', () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -26,7 +33,12 @@ describe('App', () => {
     expect(screen.getByText('MyMind Workspace')).toBeInTheDocument();
     expect(screen.getByText('思维导图画布')).toBeInTheDocument();
     expect(screen.getByText('Markdown 详情')).toBeInTheDocument();
+    expect(screen.getByText('Knowledge Graph')).toBeInTheDocument();
+    expect(screen.getByText('React Flow')).toBeInTheDocument();
+    expect(screen.getByText('Markdown Pane')).toBeInTheDocument();
     expect(screen.getAllByTestId('resize-handle')).toHaveLength(2);
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
 
     expectPaneOrder(['pane-A', 'pane-B', 'pane-C']);
   });
@@ -99,5 +111,24 @@ describe('App', () => {
 
     expect(document.documentElement.dataset.theme).toBe('night');
     expect(screen.getByRole('switch', { name: /夜晚主题/i })).toBeChecked();
+  });
+
+  it('syncs selected node details to the toolbar and markdown pane', () => {
+    render(<App />);
+
+    fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
+
+    expect(screen.getByText('note_graph')).toBeInTheDocument();
+    expect(screen.getAllByText('Knowledge Graph').length).toBeGreaterThan(1);
+  });
+
+  it('clears the selected node when clicking the empty canvas pane', () => {
+    const { container } = render(<App />);
+
+    fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
+    fireEvent.click(container.querySelector('.react-flow__pane') as Element);
+
+    expect(screen.getByText('未选择节点')).toBeInTheDocument();
+    expect(screen.getAllByText('未选择').length).toBeGreaterThan(0);
   });
 });

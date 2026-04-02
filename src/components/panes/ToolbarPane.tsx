@@ -1,11 +1,18 @@
 import type { LayoutMode } from '../../types/layout';
 import type { ThemeMode } from '../../types/theme';
 
+type ToolbarInfo = {
+  nodeCount: number;
+  edgeCount: number;
+  selectedNodeTitle: string | null;
+};
+
 type ToolbarPaneProps = {
   mode: LayoutMode;
   onModeChange: (mode: LayoutMode) => void;
   theme: ThemeMode;
   onThemeToggle: () => void;
+  info: ToolbarInfo;
 };
 
 const layoutOptions: Array<{ mode: LayoutMode; label: string }> = [
@@ -20,15 +27,15 @@ export function ToolbarPane({
   onModeChange,
   theme,
   onThemeToggle,
+  info,
 }: ToolbarPaneProps) {
   return (
     <div className="pane-content pane-content--toolbar">
       <header className="pane-header">
-        <p className="pane-eyebrow">Phase 1</p>
+        <p className="pane-eyebrow">Phase 2</p>
         <h1 className="pane-title">MyMind Workspace</h1>
         <p className="pane-description">
-          先把三栏骨架、布局模式和尺寸系统稳定下来，后续再接入
-          React Flow 与 Markdown 详情。
+          当前已经进入画布阶段，重点验证 React Flow 接入、节点选中联动和三栏协作是否顺畅。
         </p>
       </header>
 
@@ -142,11 +149,15 @@ export function ToolbarPane({
           </div>
           <div className="info-card">
             <span className="info-card__label">节点数</span>
-            <strong>0</strong>
+            <strong>{info.nodeCount}</strong>
           </div>
           <div className="info-card">
             <span className="info-card__label">边数</span>
-            <strong>0</strong>
+            <strong>{info.edgeCount}</strong>
+          </div>
+          <div className="info-card">
+            <span className="info-card__label">当前选中</span>
+            <strong>{info.selectedNodeTitle ?? '未选择'}</strong>
           </div>
         </div>
       </section>

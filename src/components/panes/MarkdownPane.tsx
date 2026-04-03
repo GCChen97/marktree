@@ -7,15 +7,22 @@ import type { KnowledgeNode, NoteRecord } from '../../types/graph';
 type MarkdownPaneProps = {
   selectedNode: KnowledgeNode | null;
   selectedNote: NoteRecord | null;
+  isMobile?: boolean;
 };
 
 export function MarkdownPane({
   selectedNode,
   selectedNote,
+  isMobile = false,
 }: MarkdownPaneProps) {
   return (
-    <div className="pane-content pane-content--markdown">
-      <header className="pane-header pane-header--compact">
+    <div
+      className="pane-content pane-content--markdown"
+      data-mobile={isMobile}
+    >
+      <header
+        className={`pane-header pane-header--compact${isMobile ? ' pane-header--mobile' : ''}`}
+      >
         <p className="pane-eyebrow">Pane C</p>
         <h2 className="pane-title">Markdown 详情</h2>
         <p className="pane-description">
@@ -24,8 +31,8 @@ export function MarkdownPane({
         </p>
       </header>
 
-      <div className="markdown-shell">
-        <div className="markdown-shell__titlebar">
+      <div className="markdown-shell" data-mobile={isMobile}>
+        <div className="markdown-shell__titlebar" data-mobile={isMobile}>
           <strong>{selectedNode?.data.title ?? '未选择节点'}</strong>
           <span>{selectedNode?.data.noteId ?? 'Phase 3 接入 Markdown'}</span>
         </div>

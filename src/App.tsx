@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { MobileWorkspaceLayout } from './components/layout/MobileWorkspaceLayout';
 import { CanvasPane } from './components/panes/CanvasPane';
 import { MarkdownPane } from './components/panes/MarkdownPane';
 import { ToolbarPane } from './components/panes/ToolbarPane';
@@ -6,6 +7,7 @@ import { ThreePaneLayout } from './components/layout/ThreePaneLayout';
 import { createDefaultGraphState } from './data/defaultGraph';
 import { usePersistentGraphState } from './hooks/usePersistentGraphState';
 import { usePersistentLayoutState } from './hooks/usePersistentLayoutState';
+import { useResponsiveMode } from './hooks/useResponsiveMode';
 import { useThemePreference } from './hooks/useThemePreference';
 import type {
   CanvasViewportApi,
@@ -13,6 +15,7 @@ import type {
   KnowledgeNode,
   NoteRecord,
 } from './types/graph';
+import type { MobilePaneTab } from './types/layout';
 import {
   DEFAULT_NEW_NODE_POSITION,
   createDefaultNodeAtPosition,
@@ -25,10 +28,13 @@ import {
 function App() {
   const { mode, sizes, setMode, setSizes } = usePersistentLayoutState();
   const { graph, setGraph } = usePersistentGraphState();
+  const { viewportMode, isMobile } = useResponsiveMode();
   const { theme, toggleTheme } = useThemePreference();
   const [canvasViewportApi, setCanvasViewportApi] =
     useState<CanvasViewportApi | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [mobileActiveTab, setMobileActiveTab] =
+    useState<MobilePaneTab>('canvas');
 
   const selectedNode = useMemo(
     () => graph.nodes.find((node) => node.id === graph.selectedNodeId) ?? null,
@@ -178,57 +184,84 @@ function App() {
     setGraph(createDefaultGraphState());
   }
 
+  useEffect(() => {
+    if (viewportMode === 'mobile') {
+      setMobileActiveTab('canvas');
+    }
+  }, [viewportMode]);
+
+  const toolbarPane = (
+    <ToolbarPane
+      canCenterSelected={Boolean(graph.selectedNodeId)}
+      canDeleteSelectedNode={Boolean(graph.selectedNodeId)}
+      importError={importError}
+      info={{
+        nodeCount: graph.nodes.length,
+        edgeCount: graph.edges.length,
+        selectedNodeTitle: selectedNode?.data.title ?? null,
+      }}
+      isMobile={isMobile}
+      mode={mode}
+      onCenterSelected={handleCenterSelected}
+      onCreateNode={handleCreateNode}
+      onDeleteSelectedNode={handleDeleteSelectedNode}
+      onExportGraph={handleExportGraph}
+      onFitView={handleFitView}
+      onImportGraph={handleImportGraph}
+      onModeChange={setMode}
+      onResetGraph={handleResetGraph}
+      onThemeToggle={toggleTheme}
+      onZoomIn={handleZoomIn}
+      onZoomOut={handleZoomOut}
+      theme={theme}
+    />
+  );
+
+  const canvasPane = (
+    <CanvasPane
+      edges={graph.edges}
+      isMobile={isMobile}
+      nodes={graph.nodes}
+      onEdgesChange={handleEdgesChange}
+      onNodesChange={handleNodesChange}
+      onSelectNode={handleSelectNode}
+      onViewportApiReady={setCanvasViewportApi}
+      selectedNodeId={graph.selectedNodeId}
+    />
+  );
+
+  const markdownPane = (
+    <MarkdownPane
+      isMobile={isMobile}
+      selectedNode={selectedNode}
+      selectedNote={selectedNote}
+    />
+  );
+
   return (
-    <div className="app-shell" data-theme={theme}>
-      <ThreePaneLayout
-        mode={mode}
-        sizes={sizes}
-        onSizesChange={setSizes}
-        panes={{
-          A: (
-            <ToolbarPane
-              mode={mode}
-              onModeChange={setMode}
-              onThemeToggle={toggleTheme}
-              theme={theme}
-              info={{
-                nodeCount: graph.nodes.length,
-                edgeCount: graph.edges.length,
-                selectedNodeTitle: selectedNode?.data.title ?? null,
-              }}
-              canDeleteSelectedNode={Boolean(graph.selectedNodeId)}
-              canCenterSelected={Boolean(graph.selectedNodeId)}
-              importError={importError}
-              onCenterSelected={handleCenterSelected}
-              onCreateNode={handleCreateNode}
-              onDeleteSelectedNode={handleDeleteSelectedNode}
-              onExportGraph={handleExportGraph}
-              onFitView={handleFitView}
-              onImportGraph={handleImportGraph}
-              onResetGraph={handleResetGraph}
-              onZoomIn={handleZoomIn}
-              onZoomOut={handleZoomOut}
-            />
-          ),
-          B: (
-            <CanvasPane
-              edges={graph.edges}
-              nodes={graph.nodes}
-              onEdgesChange={handleEdgesChange}
-              onNodesChange={handleNodesChange}
-              onSelectNode={handleSelectNode}
-              onViewportApiReady={setCanvasViewportApi}
-              selectedNodeId={graph.selectedNodeId}
-            />
-          ),
-          C: (
-            <MarkdownPane
-              selectedNode={selectedNode}
-              selectedNote={selectedNote}
-            />
-          ),
-        }}
-      />
+    <div className="app-shell" data-theme={theme} data-viewport-mode={viewportMode}>
+      {isMobile ? (
+        <MobileWorkspaceLayout
+          activeTab={mobileActiveTab}
+          onTabChange={setMobileActiveTab}
+          panes={{
+            canvas: canvasPane,
+            markdown: markdownPane,
+            toolbar: toolbarPane,
+          }}
+        />
+      ) : (
+        <ThreePaneLayout
+          mode={mode}
+          sizes={sizes}
+          onSizesChange={setSizes}
+          panes={{
+            A: toolbarPane,
+            B: canvasPane,
+            C: markdownPane,
+          }}
+        />
+      )}
     </div>
   );
 }

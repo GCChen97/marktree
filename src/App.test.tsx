@@ -30,10 +30,13 @@ describe('App', () => {
   let revokeObjectURLSpy: any;
   let anchorClickSpy: any;
   let confirmSpy: any;
+  let matchMediaSpy: any;
+  let isMobileViewport = false;
 
   beforeEach(() => {
     window.localStorage.clear();
     document.documentElement.dataset.theme = 'day';
+    isMobileViewport = false;
 
     if (!('createObjectURL' in URL)) {
       Object.defineProperty(URL, 'createObjectURL', {
@@ -61,6 +64,18 @@ describe('App', () => {
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => {});
     confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    matchMediaSpy = vi
+      .spyOn(window, 'matchMedia')
+      .mockImplementation((query: string) => ({
+        matches: query === '(max-width: 899px)' ? isMobileViewport : false,
+        media: query,
+        onchange: null,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+        dispatchEvent: () => false,
+      }));
   });
 
   afterEach(() => {
@@ -68,6 +83,7 @@ describe('App', () => {
     revokeObjectURLSpy.mockRestore();
     anchorClickSpy.mockRestore();
     confirmSpy.mockRestore();
+    matchMediaSpy.mockRestore();
   });
 
   it('renders the default ABC layout with all panes visible', () => {
@@ -187,6 +203,58 @@ describe('App', () => {
     expect(screen.getByText('Saved Node')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '删除选中节点' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Center Selected' })).toBeDisabled();
+  });
+
+  it('renders the mobile single-pane layout below 900px and defaults to canvas', () => {
+    isMobileViewport = true;
+
+    render(<App />);
+
+    expect(screen.getByTestId('mobile-workspace')).toBeInTheDocument();
+    expect(screen.queryByTestId('pane-A')).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId('resize-handle')).toHaveLength(0);
+    expect(screen.getByTestId('mobile-pane-canvas')).toBeInTheDocument();
+    expect(screen.getByTestId('mobile-bottom-nav')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '画布' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  it('switches mobile tabs and keeps toolbar actions available', () => {
+    isMobileViewport = true;
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '工具栏' }));
+
+    expect(screen.getByRole('button', { name: '新建节点' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '重置默认图谱' })).toBeInTheDocument();
+    expect(screen.getByText('当前共 3 个节点、2 条边，选中：未选择。')).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: '展开' })[1]);
+    expect(screen.getByText('当前布局')).toBeInTheDocument();
+  });
+
+  it('keeps graph state when switching tabs on mobile', () => {
+    isMobileViewport = true;
+
+    const createNodeIdSpy = vi
+      .spyOn(graphUtils, 'createNodeId')
+      .mockReturnValue('node_mobile_created');
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '工具栏' }));
+    fireEvent.click(screen.getByRole('button', { name: '新建节点' }));
+    fireEvent.click(screen.getByRole('button', { name: '详情' }));
+
+    expect(screen.getByText('在这里写内容。')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '画布' }));
+    expect(screen.getByText('Untitled')).toBeInTheDocument();
+
+    createNodeIdSpy.mockRestore();
   });
 
   it('falls back to the default graph when stored graph data is invalid', () => {

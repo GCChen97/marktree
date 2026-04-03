@@ -79,6 +79,11 @@ button {
   padding: 18px;
 }
 
+.app-shell[data-viewport-mode='mobile'] {
+  min-width: 0;
+  padding: 0;
+}
+
 .layout-shell {
   height: calc(100vh - 36px);
   min-height: 720px;
@@ -217,6 +222,15 @@ button {
 .section-title {
   margin: 0 0 var(--space-2);
   font-size: 1rem;
+}
+
+.section-toggle {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-strong) 84%, #ffffff);
+  color: var(--text-muted);
+  font-size: 0.82rem;
 }
 
 .section-copy {
@@ -704,6 +718,50 @@ button {
   padding: 0.3rem 0;
 }
 
+.mobile-workspace {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  min-height: 100vh;
+}
+
+.mobile-workspace__body {
+  min-height: 0;
+  padding: 12px 12px 0;
+}
+
+.mobile-workspace__pane {
+  height: 100%;
+  min-height: 0;
+}
+
+.mobile-workspace__nav {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel-strong) 90%, var(--bg));
+  backdrop-filter: blur(18px);
+}
+
+.mobile-workspace__nav-button {
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel-strong) 84%, #ffffff);
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.mobile-workspace__nav-button[data-active='true'] {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+  background: color-mix(in srgb, var(--accent-soft) 65%, var(--panel-strong));
+}
+
 .layout-resize-handle {
   position: relative;
   width: 18px;
@@ -738,4 +796,137 @@ button {
 .layout-resize-handle:hover .resize-handle__grip {
   transform: scaleY(1.05);
   background: linear-gradient(180deg, rgba(37, 95, 69, 0.32), rgba(37, 95, 69, 0.55));
+}
+
+@media (max-width: 899px) {
+  body {
+    min-width: 0;
+  }
+
+  .app-shell {
+    min-width: 0;
+    min-height: 100dvh;
+    padding: 0;
+  }
+
+  .layout-shell {
+    height: auto;
+    min-height: 0;
+  }
+
+  .pane {
+    overflow: visible;
+  }
+
+  .pane-content {
+    height: 100%;
+    min-height: 0;
+    padding: 16px;
+    border-radius: 20px;
+    box-shadow: 0 14px 38px rgba(45, 64, 50, 0.1);
+  }
+
+  .pane-content[data-mobile='true'] {
+    gap: 14px;
+  }
+
+  .pane-content--toolbar[data-mobile='true'] {
+    overflow: auto;
+    padding-bottom: 24px;
+  }
+
+  .pane-content--canvas[data-mobile='true'],
+  .pane-content--markdown[data-mobile='true'] {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .pane-header--mobile {
+    gap: 8px;
+  }
+
+  .pane-header--mobile .pane-title {
+    font-size: 1.3rem;
+  }
+
+  .pane-header--mobile .pane-description {
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .toolbar-section {
+    padding: 14px;
+  }
+
+  .layout-mode-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .theme-switch {
+    padding: 12px 14px;
+    align-items: flex-start;
+  }
+
+  .theme-switch__copy strong {
+    font-size: 0.92rem;
+  }
+
+  .theme-switch__copy span {
+    font-size: 0.8rem;
+  }
+
+  .canvas-surface {
+    min-height: clamp(320px, 48dvh, 520px);
+  }
+
+  .graph-canvas .react-flow__node {
+    min-width: 132px;
+    padding: 12px 14px;
+    font-size: 0.88rem;
+  }
+
+  .markdown-shell[data-mobile='true'] {
+    min-height: 0;
+    border-radius: 18px;
+  }
+
+  .markdown-shell__titlebar[data-mobile='true'] {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 14px 16px;
+  }
+
+  .markdown-shell__titlebar[data-mobile='true'] strong {
+    font-size: 1rem;
+  }
+
+  .markdown-shell__titlebar[data-mobile='true'] span {
+    font-size: 0.82rem;
+  }
+
+  .markdown-shell__body {
+    padding: 18px 16px 24px;
+  }
+
+  .markdown-prose {
+    font-size: 0.95rem;
+  }
+
+  .markdown-prose h1 {
+    font-size: 1.45rem;
+  }
+
+  .markdown-prose h2 {
+    font-size: 1.18rem;
+  }
+
+  .markdown-prose table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .markdown-prose pre,
+  .markdown-prose .katex-display {
+    max-width: 100%;
+  }
 }

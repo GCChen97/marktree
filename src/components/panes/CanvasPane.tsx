@@ -20,6 +20,7 @@ type CanvasPaneProps = {
   onEdgesChange: (edges: KnowledgeEdge[]) => void;
   onSelectNode: (nodeId: string | null) => void;
   onViewportApiReady: (api: CanvasViewportApi | null) => void;
+  isMobile?: boolean;
 };
 
 function CanvasViewportBridge({
@@ -91,6 +92,7 @@ export function CanvasPane({
   onEdgesChange,
   onSelectNode,
   onViewportApiReady,
+  isMobile = false,
 }: CanvasPaneProps) {
   const displayNodes = nodes.map((node) => ({
     ...node,
@@ -110,8 +112,13 @@ export function CanvasPane({
   };
 
   return (
-    <div className="pane-content pane-content--canvas">
-      <header className="pane-header pane-header--compact">
+    <div
+      className="pane-content pane-content--canvas"
+      data-mobile={isMobile}
+    >
+      <header
+        className={`pane-header pane-header--compact${isMobile ? ' pane-header--mobile' : ''}`}
+      >
         <p className="pane-eyebrow">Phase 4</p>
         <h2 className="pane-title">思维导图画布</h2>
         <p className="pane-description">

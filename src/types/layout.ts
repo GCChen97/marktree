@@ -8,3 +8,7 @@ export type LayoutState = {
   mode: LayoutMode;
   sizes: PaneSizes;
 };
+
+export type WorkspaceViewportMode = 'desktop' | 'mobile';
+
+export type MobilePaneTab = 'toolbar' | 'canvas' | 'markdown';

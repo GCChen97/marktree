@@ -1,6 +1,6 @@
 import type { LayoutMode } from '../../types/layout';
 import type { ThemeMode } from '../../types/theme';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 type ToolbarInfo = {
   nodeCount: number;
@@ -26,6 +26,7 @@ type ToolbarPaneProps = {
   canDeleteSelectedNode: boolean;
   canCenterSelected: boolean;
   importError: string | null;
+  isMobile?: boolean;
 };
 
 const layoutOptions: Array<{ mode: LayoutMode; label: string }> = [
@@ -53,13 +54,21 @@ export function ToolbarPane({
   canDeleteSelectedNode,
   canCenterSelected,
   importError,
+  isMobile = false,
 }: ToolbarPaneProps) {
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [isLayoutSectionExpanded, setIsLayoutSectionExpanded] = useState(
+    !isMobile,
+  );
+  const [isInfoSectionExpanded, setIsInfoSectionExpanded] = useState(!isMobile);
 
   return (
-    <div className="pane-content pane-content--toolbar">
-      <header className="pane-header">
-        <p className="pane-eyebrow">Phase 4</p>
+    <div
+      className="pane-content pane-content--toolbar"
+      data-mobile={isMobile}
+    >
+      <header className={`pane-header${isMobile ? ' pane-header--mobile' : ''}`}>
+        <p className="pane-eyebrow">{isMobile ? 'Phase 5' : 'Phase 4'}</p>
         <h1 className="pane-title">MyMind Workspace</h1>
         <p className="pane-description">
           左栏现在负责图谱管理、视图控制与本地图谱持久化。
@@ -104,40 +113,61 @@ export function ToolbarPane({
       <section className="toolbar-section">
         <div className="section-heading-row">
           <h2 className="section-title">布局模式</h2>
-          <span className="section-badge">A 固定两侧</span>
-        </div>
-        <p className="section-copy">
-          支持四种固定模式。工具栏始终处于最左或最右，画布区和 Markdown
-          区可左右互换。
-        </p>
-        <div
-          aria-label="Layout mode selector"
-          className="layout-mode-grid"
-          role="group"
-        >
-          {layoutOptions.map((option) => (
+          {isMobile ? (
             <button
-              aria-pressed={option.mode === mode}
-              aria-label={`切换到 ${option.label} 布局`}
-              className="mode-button"
-              data-active={option.mode === mode}
-              key={option.mode}
-              onClick={() => onModeChange(option.mode)}
-              title={
-                option.mode === 'ABC'
-                  ? '工具栏 | 画布 | Markdown'
-                  : option.mode === 'ACB'
-                    ? '工具栏 | Markdown | 画布'
-                    : option.mode === 'CBA'
-                      ? 'Markdown | 画布 | 工具栏'
-                      : '画布 | Markdown | 工具栏'
+              aria-expanded={isLayoutSectionExpanded}
+              className="section-toggle"
+              onClick={() =>
+                setIsLayoutSectionExpanded((currentState) => !currentState)
               }
               type="button"
             >
-              <span className="mode-button__label">{option.label}</span>
+              {isLayoutSectionExpanded ? '收起' : '展开'}
             </button>
-          ))}
+          ) : (
+            <span className="section-badge">A 固定两侧</span>
+          )}
         </div>
+        {isMobile && !isLayoutSectionExpanded ? (
+          <p className="section-copy">
+            当前桌面布局预设为 `{mode}`。展开后可调整回到桌面端时使用的三栏顺序。
+          </p>
+        ) : (
+          <>
+            <p className="section-copy">
+              支持四种固定模式。工具栏始终处于最左或最右，画布区和 Markdown
+              区可左右互换。
+            </p>
+            <div
+              aria-label="Layout mode selector"
+              className="layout-mode-grid"
+              role="group"
+            >
+              {layoutOptions.map((option) => (
+                <button
+                  aria-pressed={option.mode === mode}
+                  aria-label={`切换到 ${option.label} 布局`}
+                  className="mode-button"
+                  data-active={option.mode === mode}
+                  key={option.mode}
+                  onClick={() => onModeChange(option.mode)}
+                  title={
+                    option.mode === 'ABC'
+                      ? '工具栏 | 画布 | Markdown'
+                      : option.mode === 'ACB'
+                        ? '工具栏 | Markdown | 画布'
+                        : option.mode === 'CBA'
+                          ? 'Markdown | 画布 | 工具栏'
+                          : '画布 | Markdown | 工具栏'
+                  }
+                  type="button"
+                >
+                  <span className="mode-button__label">{option.label}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       <section className="toolbar-section">
@@ -224,25 +254,46 @@ export function ToolbarPane({
       </section>
 
       <section className="toolbar-section">
-        <h2 className="section-title">信息区</h2>
-        <div className="info-grid">
-          <div className="info-card">
-            <span className="info-card__label">当前布局</span>
-            <strong>{mode}</strong>
-          </div>
-          <div className="info-card">
-            <span className="info-card__label">节点数</span>
-            <strong>{info.nodeCount}</strong>
-          </div>
-          <div className="info-card">
-            <span className="info-card__label">边数</span>
-            <strong>{info.edgeCount}</strong>
-          </div>
-          <div className="info-card">
-            <span className="info-card__label">当前选中</span>
-            <strong>{info.selectedNodeTitle ?? '未选择'}</strong>
-          </div>
+        <div className="section-heading-row">
+          <h2 className="section-title">信息区</h2>
+          {isMobile ? (
+            <button
+              aria-expanded={isInfoSectionExpanded}
+              className="section-toggle"
+              onClick={() =>
+                setIsInfoSectionExpanded((currentState) => !currentState)
+              }
+              type="button"
+            >
+              {isInfoSectionExpanded ? '收起' : '展开'}
+            </button>
+          ) : null}
         </div>
+        {isMobile && !isInfoSectionExpanded ? (
+          <p className="section-copy">
+            当前共 {info.nodeCount} 个节点、{info.edgeCount} 条边，选中：
+            {info.selectedNodeTitle ?? '未选择'}。
+          </p>
+        ) : (
+          <div className="info-grid">
+            <div className="info-card">
+              <span className="info-card__label">当前布局</span>
+              <strong>{mode}</strong>
+            </div>
+            <div className="info-card">
+              <span className="info-card__label">节点数</span>
+              <strong>{info.nodeCount}</strong>
+            </div>
+            <div className="info-card">
+              <span className="info-card__label">边数</span>
+              <strong>{info.edgeCount}</strong>
+            </div>
+            <div className="info-card">
+              <span className="info-card__label">当前选中</span>
+              <strong>{info.selectedNodeTitle ?? '未选择'}</strong>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

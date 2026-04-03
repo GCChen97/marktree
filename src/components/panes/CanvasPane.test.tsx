@@ -1,9 +1,10 @@
-import { render, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import type { ReactNode } from 'react';
 import type { CanvasViewportApi, KnowledgeNode } from '../../types/graph';
 
 const viewportMocks = vi.hoisted(() => ({
+  connect: vi.fn(),
   fitView: vi.fn(),
   zoomIn: vi.fn(),
   zoomOut: vi.fn(),
@@ -24,14 +25,24 @@ vi.mock('@xyflow/react', async () => {
     ReactFlow: ({
       children,
       className,
+      onConnect,
     }: {
       children?: ReactNode;
       className?: string;
+      onConnect?: (connection: { source: string; target: string }) => void;
     }) =>
       createElement(
         'div',
         { className },
         createElement('div', { className: 'react-flow__renderer' }),
+        createElement(
+          'button',
+          {
+            onClick: () => onConnect?.({ source: 'node_a', target: 'node_b' }),
+            type: 'button',
+          },
+          'Mock Connect',
+        ),
         children,
       ),
     applyEdgeChanges: (_changes: unknown, edges: unknown) => edges,
@@ -52,6 +63,7 @@ import { CanvasPane } from './CanvasPane';
 
 describe('CanvasPane viewport bridge', () => {
   beforeEach(() => {
+    viewportMocks.connect.mockReset();
     viewportMocks.fitView.mockReset();
     viewportMocks.zoomIn.mockReset();
     viewportMocks.zoomOut.mockReset();
@@ -92,16 +104,22 @@ describe('CanvasPane viewport bridge', () => {
 
     const { container } = render(
       <CanvasPane
+        canCenterSelected
         currentGraphId="graph_focus"
         edges={[]}
         nodes={[node]}
+        onCenterSelected={() => {}}
+        onConnectEdge={viewportMocks.connect}
         onEdgesChange={() => {}}
         onEnterLinkedGraph={() => {}}
+        onFitView={() => {}}
         onNodesChange={() => {}}
         onSelectNode={() => {}}
         onViewportApiReady={(api) => {
           viewportApi = api;
         }}
+        onZoomIn={() => {}}
+        onZoomOut={() => {}}
         selectedNodeId={null}
       />,
     );
@@ -155,5 +173,56 @@ describe('CanvasPane viewport bridge', () => {
       y: 220,
     });
     expect(center).toEqual({ x: 155, y: 110 });
+  });
+
+  it('forwards connect events and renders floating canvas controls', () => {
+    const node: KnowledgeNode = {
+      id: 'node_focus',
+      position: { x: 120, y: 80 },
+      data: {
+        title: 'Focus Node',
+        noteId: 'note_focus',
+        kind: 'default',
+      },
+    };
+    const fitView = vi.fn();
+    const zoomIn = vi.fn();
+    const zoomOut = vi.fn();
+    const centerSelected = vi.fn();
+
+    render(
+      <CanvasPane
+        canCenterSelected={false}
+        currentGraphId="graph_focus"
+        edges={[]}
+        nodes={[node]}
+        onCenterSelected={centerSelected}
+        onConnectEdge={viewportMocks.connect}
+        onEdgesChange={() => {}}
+        onEnterLinkedGraph={() => {}}
+        onFitView={fitView}
+        onNodesChange={() => {}}
+        onSelectNode={() => {}}
+        onViewportApiReady={() => {}}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        selectedNodeId={null}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mock Connect' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fit View' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom In' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom Out' }));
+
+    expect(screen.getByRole('button', { name: 'Center Selected' })).toBeDisabled();
+    expect(viewportMocks.connect).toHaveBeenCalledWith({
+      source: 'node_a',
+      target: 'node_b',
+    });
+    expect(fitView).toHaveBeenCalled();
+    expect(zoomIn).toHaveBeenCalled();
+    expect(zoomOut).toHaveBeenCalled();
+    expect(centerSelected).not.toHaveBeenCalled();
   });
 });

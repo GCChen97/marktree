@@ -1,4 +1,5 @@
 import {
+  type Connection,
   Position,
   ReactFlow,
   applyEdgeChanges,
@@ -6,7 +7,12 @@ import {
   useReactFlow,
 } from '@xyflow/react';
 import { useEffect, useMemo } from 'react';
-import type { NodeTypes, OnEdgesChange, OnNodesChange } from '@xyflow/react';
+import type {
+  NodeTypes,
+  OnConnect,
+  OnEdgesChange,
+  OnNodesChange,
+} from '@xyflow/react';
 import { JumpNode } from '../canvas/JumpNode';
 import type {
   CanvasViewportApi,
@@ -22,9 +28,15 @@ type CanvasPaneProps = {
   selectedNodeId: string | null;
   onNodesChange: (nodes: KnowledgeNode[]) => void;
   onEdgesChange: (edges: KnowledgeEdge[]) => void;
+  onConnectEdge: (connection: Connection) => void;
   onSelectNode: (nodeId: string | null) => void;
   onViewportApiReady: (api: CanvasViewportApi | null) => void;
   onEnterLinkedGraph: (targetGraphId: GraphId) => void;
+  onFitView: () => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onCenterSelected: () => void;
+  canCenterSelected: boolean;
   isMobile?: boolean;
 };
 
@@ -100,9 +112,15 @@ export function CanvasPane({
   selectedNodeId,
   onNodesChange,
   onEdgesChange,
+  onConnectEdge,
   onSelectNode,
   onViewportApiReady,
   onEnterLinkedGraph,
+  onFitView,
+  onZoomIn,
+  onZoomOut,
+  onCenterSelected,
+  canCenterSelected,
   isMobile = false,
 }: CanvasPaneProps) {
   const displayNodes = useMemo(
@@ -145,6 +163,10 @@ export function CanvasPane({
     onEdgesChange(applyEdgeChanges(changes, edges));
   };
 
+  const handleConnect: OnConnect = (connection) => {
+    onConnectEdge(connection);
+  };
+
   return (
     <div
       className="pane-content pane-content--canvas"
@@ -161,6 +183,81 @@ export function CanvasPane({
       </header>
 
       <div className="canvas-surface" data-testid="graph-canvas-surface">
+        <div className="canvas-controls" data-mobile={isMobile}>
+          <button
+            aria-label="Fit View"
+            className="canvas-control-button"
+            onClick={onFitView}
+            title="Fit View"
+            type="button"
+          >
+            <svg aria-hidden="true" className="canvas-control-button__icon" viewBox="0 0 16 16">
+              <path
+                d="M5 2.75H2.75V5M11 2.75h2.25V5M5 13.25H2.75V11M11 13.25h2.25V11"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.35"
+              />
+            </svg>
+          </button>
+          <button
+            aria-label="Zoom In"
+            className="canvas-control-button"
+            onClick={onZoomIn}
+            title="Zoom In"
+            type="button"
+          >
+            <svg aria-hidden="true" className="canvas-control-button__icon" viewBox="0 0 16 16">
+              <path
+                d="M7.25 4.75v5.5M4.5 7.5H10M10.75 10.75l2.75 2.75M7.25 11.25a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.35"
+              />
+            </svg>
+          </button>
+          <button
+            aria-label="Zoom Out"
+            className="canvas-control-button"
+            onClick={onZoomOut}
+            title="Zoom Out"
+            type="button"
+          >
+            <svg aria-hidden="true" className="canvas-control-button__icon" viewBox="0 0 16 16">
+              <path
+                d="M4.5 7.5H10M10.75 10.75l2.75 2.75M7.25 11.25a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.35"
+              />
+            </svg>
+          </button>
+          <button
+            aria-label="Center Selected"
+            className="canvas-control-button"
+            disabled={!canCenterSelected}
+            onClick={onCenterSelected}
+            title="Center Selected"
+            type="button"
+          >
+            <svg aria-hidden="true" className="canvas-control-button__icon" viewBox="0 0 16 16">
+              <path
+                d="M8 2.25v2M8 11.75v2M2.25 8h2M11.75 8h2M8 10.75a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5Z"
+                fill="none"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.35"
+              />
+            </svg>
+          </button>
+        </div>
         <ReactFlow<KnowledgeNode, KnowledgeEdge>
           className="graph-canvas"
           data-testid="react-flow-canvas"
@@ -168,6 +265,7 @@ export function CanvasPane({
           fitView
           nodeTypes={nodeTypes}
           nodes={displayNodes}
+          onConnect={handleConnect}
           onEdgesChange={handleEdgesChange}
           onNodeClick={(_, node) => onSelectNode(node.id)}
           onNodesChange={handleNodesChange}

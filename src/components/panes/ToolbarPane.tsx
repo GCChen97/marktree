@@ -31,19 +31,16 @@ type ToolbarPaneProps = {
   onDeleteCurrentGraph: () => void;
   onCreateNode: () => void;
   onDeleteSelectedNode: () => void;
-  onFitView: () => void;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onCenterSelected: () => void;
   onConvertSelectedNodeToJump: () => void;
   onUnsetSelectedJumpNode: () => void;
   onExportCurrentGraph: () => void;
   onExportWorkspace: () => void;
   onImportData: (file: File) => void;
   canDeleteSelectedNode: boolean;
-  canCenterSelected: boolean;
   canConvertSelectedNodeToJump: boolean;
   canUnsetSelectedJumpNode: boolean;
+  selectedNodeTitle: string | null;
+  onRenameSelectedNode: (title: string) => void;
   selectedJumpTargetGraphId: GraphId | null;
   selectedJumpNodeTitle: string | null;
   availableJumpTargetGraphs: Array<{ id: GraphId; title: string }>;
@@ -74,19 +71,16 @@ export function ToolbarPane({
   onDeleteCurrentGraph,
   onCreateNode,
   onDeleteSelectedNode,
-  onFitView,
-  onZoomIn,
-  onZoomOut,
-  onCenterSelected,
   onConvertSelectedNodeToJump,
   onUnsetSelectedJumpNode,
   onExportCurrentGraph,
   onExportWorkspace,
   onImportData,
   canDeleteSelectedNode,
-  canCenterSelected,
   canConvertSelectedNodeToJump,
   canUnsetSelectedJumpNode,
+  selectedNodeTitle,
+  onRenameSelectedNode,
   selectedJumpTargetGraphId,
   selectedJumpNodeTitle,
   availableJumpTargetGraphs,
@@ -96,9 +90,6 @@ export function ToolbarPane({
   isMobile = false,
 }: ToolbarPaneProps) {
   const importInputRef = useRef<HTMLInputElement | null>(null);
-  const [isLayoutSectionExpanded, setIsLayoutSectionExpanded] = useState(
-    !isMobile,
-  );
   const [isInfoSectionExpanded, setIsInfoSectionExpanded] = useState(!isMobile);
 
   return (
@@ -107,12 +98,172 @@ export function ToolbarPane({
       data-mobile={isMobile}
     >
       <header className={`pane-header${isMobile ? ' pane-header--mobile' : ''}`}>
-        <p className="pane-eyebrow">Phase 6</p>
-        <h1 className="pane-title">MyMind Workspace</h1>
-        <p className="pane-description">
-          当前工作区支持多 graph 管理、跳转节点与本地持久化。
-        </p>
+        <div className="toolbar-header-row">
+          <div className="toolbar-header-copy">
+            <p className="pane-eyebrow">Phase 6</p>
+            <h1 className="pane-title">MyMind Workspace</h1>
+            <p className="pane-description">
+              当前 graph 的操作和 workspace 管理都集中在这里。
+            </p>
+          </div>
+          <div className="toolbar-header-actions">
+            <label className="theme-switch theme-switch--compact" htmlFor="theme-toggle">
+              <input
+                aria-label="夜晚主题"
+                checked={theme === 'night'}
+                className="theme-switch__input"
+                id="theme-toggle"
+                onChange={onThemeToggle}
+                role="switch"
+                type="checkbox"
+              />
+              <span aria-hidden="true" className="theme-switch__track">
+                <span className="theme-switch__thumb" />
+              </span>
+            </label>
+          </div>
+        </div>
       </header>
+
+      <section className="toolbar-section">
+        <div className="section-heading-row">
+          <h2 className="section-title">布局切换</h2>
+        </div>
+        <div
+          aria-label="Layout mode selector"
+          className="layout-mode-grid layout-mode-grid--compact"
+          role="group"
+        >
+          {layoutOptions.map((option) => (
+            <button
+              aria-pressed={option.mode === mode}
+              aria-label={`切换到 ${option.label} 布局`}
+              className="mode-button"
+              data-active={option.mode === mode}
+              key={option.mode}
+              onClick={() => onModeChange(option.mode)}
+              title={option.label}
+              type="button"
+            >
+              <span className="mode-button__label">{option.label}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="toolbar-section">
+        <h2 className="section-title">图谱操作</h2>
+        {selectedNodeTitle ? (
+          <label className="toolbar-text-field">
+            <span className="info-card__label">节点标题</span>
+            <input
+              className="toolbar-text-input"
+              onChange={(event) => onRenameSelectedNode(event.target.value)}
+              type="text"
+              value={selectedNodeTitle}
+            />
+          </label>
+        ) : null}
+        <div className="toolbar-action-list">
+          <button className="toolbar-action-button" onClick={onCreateNode} type="button">
+            新建节点
+          </button>
+          <button
+            className="toolbar-action-button"
+            disabled={!canDeleteSelectedNode}
+            onClick={onDeleteSelectedNode}
+            type="button"
+          >
+            删除选中节点
+          </button>
+          <button
+            className="toolbar-action-button"
+            disabled={!canConvertSelectedNodeToJump}
+            onClick={onConvertSelectedNodeToJump}
+            type="button"
+          >
+            设为跳转节点
+          </button>
+          <button
+            className="toolbar-action-button"
+            disabled={!canUnsetSelectedJumpNode}
+            onClick={onUnsetSelectedJumpNode}
+            type="button"
+          >
+            取消跳转节点
+          </button>
+        </div>
+      </section>
+
+      {selectedJumpNodeTitle ? (
+        <section className="toolbar-section">
+          <h2 className="section-title">跳转配置</h2>
+          <p className="section-copy">当前节点：{selectedJumpNodeTitle}</p>
+          <label className="toolbar-select-field">
+            <span className="info-card__label">目标 Graph</span>
+            <select
+              className="toolbar-select"
+              onChange={(event) =>
+                onSetSelectedJumpTargetGraph(event.target.value || null)
+              }
+              value={selectedJumpTargetGraphId ?? ''}
+            >
+              <option value="">无</option>
+              {availableJumpTargetGraphs.map((graphItem) => (
+                <option key={graphItem.id} value={graphItem.id}>
+                  {graphItem.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="section-copy">
+            {jumpTargetStatus ?? '未设置目标 graph'}
+          </p>
+        </section>
+      ) : null}
+
+      <section className="toolbar-section">
+        <h2 className="section-title">数据操作</h2>
+        <div className="toolbar-action-list">
+          <button
+            className="toolbar-action-button"
+            onClick={onExportCurrentGraph}
+            type="button"
+          >
+            导出当前 Graph
+          </button>
+          <button
+            className="toolbar-action-button"
+            onClick={onExportWorkspace}
+            type="button"
+          >
+            导出整个 Workspace
+          </button>
+          <button
+            className="toolbar-action-button"
+            onClick={() => importInputRef.current?.click()}
+            type="button"
+          >
+            导入 JSON
+          </button>
+          <input
+            accept=".json,application/json"
+            className="visually-hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+
+              if (file) {
+                onImportData(file);
+              }
+
+              event.currentTarget.value = '';
+            }}
+            ref={importInputRef}
+            type="file"
+          />
+        </div>
+        {importError ? <p className="toolbar-feedback">{importError}</p> : null}
+      </section>
 
       <section className="toolbar-section">
         <div className="section-heading-row">
@@ -204,219 +355,6 @@ export function ToolbarPane({
             </button>
           ))}
         </div>
-      </section>
-
-      <section className="toolbar-section">
-        <div className="section-heading-row">
-          <h2 className="section-title">外观主题</h2>
-          <span className="section-badge">
-            {theme === 'night' ? '夜晚' : '白天'}
-          </span>
-        </div>
-        <p className="section-copy">
-          当前提供一键切换的夜晚主题，保留同一套柔和配色和玻璃感面板。
-        </p>
-        <label className="theme-switch" htmlFor="theme-toggle">
-          <span className="theme-switch__copy">
-            <strong>夜晚主题</strong>
-            <span>
-              {theme === 'night'
-                ? '适合低光环境，降低页面整体亮度。'
-                : '保留当前清爽主题，适合白天浏览。'}
-            </span>
-          </span>
-          <span className="theme-switch__control">
-            <input
-              checked={theme === 'night'}
-              className="theme-switch__input"
-              id="theme-toggle"
-              onChange={onThemeToggle}
-              role="switch"
-              type="checkbox"
-            />
-            <span aria-hidden="true" className="theme-switch__track">
-              <span className="theme-switch__thumb" />
-            </span>
-          </span>
-        </label>
-      </section>
-
-      <section className="toolbar-section">
-        <div className="section-heading-row">
-          <h2 className="section-title">布局模式</h2>
-          {isMobile ? (
-            <button
-              aria-expanded={isLayoutSectionExpanded}
-              className="section-toggle"
-              onClick={() =>
-                setIsLayoutSectionExpanded((currentState) => !currentState)
-              }
-              type="button"
-            >
-              {isLayoutSectionExpanded ? '收起' : '展开'}
-            </button>
-          ) : (
-            <span className="section-badge">A 固定两侧</span>
-          )}
-        </div>
-        {isMobile && !isLayoutSectionExpanded ? (
-          <p className="section-copy">
-            当前桌面布局预设为 `{mode}`。展开后可调整回到桌面端时使用的三栏顺序。
-          </p>
-        ) : (
-          <>
-            <p className="section-copy">
-              支持四种固定模式。工具栏始终处于最左或最右，画布区和 Markdown
-              区可左右互换。
-            </p>
-            <div
-              aria-label="Layout mode selector"
-              className="layout-mode-grid"
-              role="group"
-            >
-              {layoutOptions.map((option) => (
-                <button
-                  aria-pressed={option.mode === mode}
-                  aria-label={`切换到 ${option.label} 布局`}
-                  className="mode-button"
-                  data-active={option.mode === mode}
-                  key={option.mode}
-                  onClick={() => onModeChange(option.mode)}
-                  title={option.label}
-                  type="button"
-                >
-                  <span className="mode-button__label">{option.label}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </section>
-
-      <section className="toolbar-section">
-        <h2 className="section-title">图谱操作</h2>
-        <div className="toolbar-action-list">
-          <button className="toolbar-action-button" onClick={onCreateNode} type="button">
-            新建节点
-          </button>
-          <button
-            className="toolbar-action-button"
-            disabled={!canDeleteSelectedNode}
-            onClick={onDeleteSelectedNode}
-            type="button"
-          >
-            删除选中节点
-          </button>
-          <button
-            className="toolbar-action-button"
-            disabled={!canConvertSelectedNodeToJump}
-            onClick={onConvertSelectedNodeToJump}
-            type="button"
-          >
-            设为跳转节点
-          </button>
-          <button
-            className="toolbar-action-button"
-            disabled={!canUnsetSelectedJumpNode}
-            onClick={onUnsetSelectedJumpNode}
-            type="button"
-          >
-            取消跳转节点
-          </button>
-        </div>
-      </section>
-
-      {selectedJumpNodeTitle ? (
-        <section className="toolbar-section">
-          <h2 className="section-title">跳转配置</h2>
-          <p className="section-copy">当前节点：{selectedJumpNodeTitle}</p>
-          <label className="toolbar-select-field">
-            <span className="info-card__label">目标 Graph</span>
-            <select
-              className="toolbar-select"
-              onChange={(event) =>
-                onSetSelectedJumpTargetGraph(event.target.value || null)
-              }
-              value={selectedJumpTargetGraphId ?? ''}
-            >
-              <option value="">无</option>
-              {availableJumpTargetGraphs.map((graphItem) => (
-                <option key={graphItem.id} value={graphItem.id}>
-                  {graphItem.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <p className="section-copy">
-            {jumpTargetStatus ?? '未设置目标 graph'}
-          </p>
-        </section>
-      ) : null}
-
-      <section className="toolbar-section">
-        <h2 className="section-title">视图操作</h2>
-        <div className="toolbar-action-list">
-          <button className="toolbar-action-button" onClick={onFitView} type="button">
-            Fit View
-          </button>
-          <button className="toolbar-action-button" onClick={onZoomIn} type="button">
-            Zoom In
-          </button>
-          <button className="toolbar-action-button" onClick={onZoomOut} type="button">
-            Zoom Out
-          </button>
-          <button
-            className="toolbar-action-button"
-            disabled={!canCenterSelected}
-            onClick={onCenterSelected}
-            type="button"
-          >
-            Center Selected
-          </button>
-        </div>
-      </section>
-
-      <section className="toolbar-section">
-        <h2 className="section-title">数据操作</h2>
-        <div className="toolbar-action-list">
-          <button
-            className="toolbar-action-button"
-            onClick={onExportCurrentGraph}
-            type="button"
-          >
-            导出当前 Graph
-          </button>
-          <button
-            className="toolbar-action-button"
-            onClick={onExportWorkspace}
-            type="button"
-          >
-            导出整个 Workspace
-          </button>
-          <button
-            className="toolbar-action-button"
-            onClick={() => importInputRef.current?.click()}
-            type="button"
-          >
-            导入 JSON
-          </button>
-          <input
-            accept=".json,application/json"
-            className="visually-hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-
-              if (file) {
-                onImportData(file);
-              }
-
-              event.currentTarget.value = '';
-            }}
-            ref={importInputRef}
-            type="file"
-          />
-        </div>
-        {importError ? <p className="toolbar-feedback">{importError}</p> : null}
       </section>
 
       <section className="toolbar-section">

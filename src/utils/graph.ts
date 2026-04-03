@@ -45,6 +45,22 @@ export function createGraphId() {
   return `graph_${Date.now()}_${graphCounter}`;
 }
 
+export function createEdgeId(
+  source: string,
+  target: string,
+  sourceHandle?: string | null,
+  targetHandle?: string | null,
+) {
+  return [
+    'edge',
+    source,
+    sourceHandle ?? 'default-source',
+    target,
+    targetHandle ?? 'default-target',
+    Date.now(),
+  ].join('_');
+}
+
 export function createDefaultNoteForNode(nodeId: string): NoteRecord {
   return {
     id: nodeId,

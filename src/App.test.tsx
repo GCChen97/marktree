@@ -114,10 +114,19 @@ describe('App', () => {
 
     expect(screen.getByText('MyMind Workspace')).toBeInTheDocument();
     expect(screen.getByText('Graph 管理')).toBeInTheDocument();
+    expect(
+      screen.getByText('Graph 管理').compareDocumentPosition(
+        screen.getByText('信息区'),
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(getGraphButton('Main Graph')).toBeInTheDocument();
     expect(screen.getByText('Knowledge Graph')).toBeInTheDocument();
     expect(screen.getByText('React Flow')).toBeInTheDocument();
     expect(screen.getByText('Markdown Pane')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Fit View' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Zoom In' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Zoom Out' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Center Selected' })).toBeDisabled();
     expect(screen.getAllByTestId('resize-handle')).toHaveLength(2);
     expectPaneOrder(['pane-A', 'pane-B', 'pane-C']);
   });
@@ -259,6 +268,19 @@ describe('App', () => {
 
     expect(screen.getByText('note_graph')).toBeInTheDocument();
     expect(screen.getByText('当前选中')).toBeInTheDocument();
+    expect(screen.getByText('节点承载概念')).toBeInTheDocument();
+  });
+
+  it('renames the selected node title from the toolbar input', () => {
+    render(<App />);
+
+    fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
+    fireEvent.change(screen.getByRole('textbox', { name: /节点标题/i }), {
+      target: { value: 'Graph Core' },
+    });
+
+    expect(screen.getAllByText('Graph Core').length).toBeGreaterThan(0);
+    expect(screen.getByText('note_graph')).toBeInTheDocument();
     expect(screen.getByText('节点承载概念')).toBeInTheDocument();
   });
 

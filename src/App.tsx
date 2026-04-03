@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Connection } from '@xyflow/react';
 import { MobileWorkspaceLayout } from './components/layout/MobileWorkspaceLayout';
 import { ThreePaneLayout } from './components/layout/ThreePaneLayout';
 import { CanvasPane } from './components/panes/CanvasPane';
@@ -24,6 +25,7 @@ import {
   assignImportedGraphId,
   buildGraphReferenceIndex,
   clearGraphReferences,
+  createEdgeId,
   createDefaultNodeAtPosition,
   createDefaultNoteForNode,
   createGraphId,
@@ -197,6 +199,30 @@ function App() {
     updateCurrentGraph((graph) => ({
       ...graph,
       edges,
+    }));
+  }
+
+  function handleConnectEdge(connection: Connection) {
+    if (!connection.source || !connection.target) {
+      return;
+    }
+
+    const nextEdge: KnowledgeEdge = {
+      id: createEdgeId(
+        connection.source,
+        connection.target,
+        connection.sourceHandle,
+        connection.targetHandle,
+      ),
+      source: connection.source,
+      target: connection.target,
+      ...(connection.sourceHandle ? { sourceHandle: connection.sourceHandle } : {}),
+      ...(connection.targetHandle ? { targetHandle: connection.targetHandle } : {}),
+    };
+
+    updateCurrentGraph((graph) => ({
+      ...graph,
+      edges: [...graph.edges, nextEdge],
     }));
   }
 
@@ -525,6 +551,27 @@ function App() {
     [setWorkspace],
   );
 
+  function handleRenameSelectedNode(title: string) {
+    if (!selectedNode) {
+      return;
+    }
+
+    updateCurrentGraph((graph) => ({
+      ...graph,
+      nodes: graph.nodes.map((node) =>
+        node.id === selectedNode.id
+          ? {
+              ...node,
+              data: {
+                ...node.data,
+                title,
+              },
+            }
+          : node,
+      ),
+    }));
+  }
+
   if (!currentGraph) {
     return null;
   }
@@ -532,7 +579,6 @@ function App() {
   const toolbarPane = (
     <ToolbarPane
       availableJumpTargetGraphs={availableJumpTargetGraphs}
-      canCenterSelected={Boolean(selectedNode)}
       canConvertSelectedNodeToJump={Boolean(
         selectedNode && selectedNode.data.kind !== 'jump',
       )}
@@ -550,7 +596,6 @@ function App() {
       isMobile={isMobile}
       jumpTargetStatus={jumpTargetStatus}
       mode={mode}
-      onCenterSelected={handleCenterSelected}
       onConvertSelectedNodeToJump={handleConvertSelectedNodeToJump}
       onCreateGraph={handleCreateGraph}
       onCreateNode={handleCreateNode}
@@ -558,16 +603,15 @@ function App() {
       onDeleteSelectedNode={handleDeleteSelectedNode}
       onExportCurrentGraph={handleExportCurrentGraph}
       onExportWorkspace={handleExportWorkspace}
-      onFitView={handleFitView}
       onImportData={handleImportData}
       onModeChange={setMode}
+      onRenameSelectedNode={handleRenameSelectedNode}
       onRenameCurrentGraph={handleRenameCurrentGraph}
       onSelectGraph={handleSelectGraph}
       onSetSelectedJumpTargetGraph={handleSetSelectedJumpTargetGraph}
       onThemeToggle={toggleTheme}
       onUnsetSelectedJumpNode={handleUnsetSelectedJumpNode}
-      onZoomIn={handleZoomIn}
-      onZoomOut={handleZoomOut}
+      selectedNodeTitle={selectedNode?.data.title ?? null}
       selectedJumpNodeTitle={
         selectedNode?.data.kind === 'jump' ? selectedNode.data.title : null
       }
@@ -602,11 +646,17 @@ function App() {
           },
         };
       })}
+      canCenterSelected={Boolean(selectedNode)}
+      onCenterSelected={handleCenterSelected}
+      onConnectEdge={handleConnectEdge}
       onEdgesChange={handleEdgesChange}
       onEnterLinkedGraph={handleEnterLinkedGraph}
+      onFitView={handleFitView}
       onNodesChange={handleNodesChange}
       onSelectNode={handleSelectNode}
       onViewportApiReady={setCanvasViewportApi}
+      onZoomIn={handleZoomIn}
+      onZoomOut={handleZoomOut}
       selectedNodeId={selectedNodeId}
     />
   );

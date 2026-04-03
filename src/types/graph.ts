@@ -1,4 +1,4 @@
-import type { Edge, Node } from '@xyflow/react';
+import type { Connection, Edge, Node } from '@xyflow/react';
 
 export type GraphId = string;
 
@@ -78,3 +78,5 @@ export type CanvasViewportApi = {
   centerOnNode: (node: KnowledgeNode) => void;
   getCanvasCenterPosition: () => { x: number; y: number };
 };
+
+export type EdgeConnection = Connection;

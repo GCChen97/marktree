@@ -157,6 +157,25 @@ button {
   line-height: 1.6;
 }
 
+.toolbar-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.toolbar-header-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.toolbar-header-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
 .toolbar-section {
   padding: var(--space-4);
   border: 1px solid var(--line);
@@ -332,6 +351,27 @@ button {
   color: var(--text);
 }
 
+.toolbar-text-field {
+  display: grid;
+  gap: 8px;
+  margin-bottom: var(--space-3);
+}
+
+.toolbar-text-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--panel-strong) 88%, #ffffff);
+  color: var(--text);
+}
+
+.toolbar-text-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-soft) 58%, transparent);
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -394,6 +434,10 @@ button {
   gap: 10px;
 }
 
+.layout-mode-grid--compact {
+  gap: 8px;
+}
+
 .theme-switch {
   display: flex;
   align-items: center;
@@ -403,6 +447,12 @@ button {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--panel-strong) 88%, transparent);
+}
+
+.theme-switch--compact {
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 
 .theme-switch__copy {
@@ -499,7 +549,6 @@ button {
 
 .mode-button:hover {
   border-color: var(--line-strong);
-  transform: translateY(-1px);
 }
 
 :root[data-theme='night'] .mode-button {
@@ -540,7 +589,7 @@ button {
 }
 
 .mode-button__label {
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -589,6 +638,56 @@ button {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(241, 246, 241, 0.95)),
     var(--panel-strong);
+}
+
+.canvas-controls {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--panel-strong) 90%, var(--bg));
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 22px rgba(24, 36, 29, 0.12);
+}
+
+.canvas-control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel-strong) 94%, #ffffff);
+  color: var(--text-muted);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.canvas-control-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  background: color-mix(in srgb, var(--accent-soft) 26%, var(--panel-strong));
+  color: var(--text);
+}
+
+.canvas-control-button:disabled {
+  opacity: 0.44;
+  cursor: not-allowed;
+}
+
+.canvas-control-button__icon {
+  width: 16px;
+  height: 16px;
 }
 
 :root[data-theme='night'] .canvas-surface {
@@ -732,6 +831,27 @@ button {
 
 :root[data-theme='night'] .graph-canvas .react-flow__edge-path {
   stroke: rgba(141, 208, 176, 0.5);
+}
+
+:root[data-theme='night'] .toolbar-text-input {
+  background: rgba(18, 28, 30, 0.92);
+}
+
+:root[data-theme='night'] .canvas-controls {
+  border-color: rgba(154, 197, 182, 0.14);
+  background: rgba(17, 26, 28, 0.88);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme='night'] .canvas-control-button {
+  background: rgba(20, 31, 33, 0.96);
+  color: rgba(214, 228, 226, 0.82);
+}
+
+:root[data-theme='night'] .canvas-control-button:hover:not(:disabled) {
+  border-color: rgba(141, 208, 176, 0.28);
+  background: rgba(29, 46, 48, 0.98);
+  color: rgba(240, 248, 246, 0.94);
 }
 
 :root[data-theme='night'] .graph-list__item {
@@ -1072,6 +1192,14 @@ button {
     gap: 8px;
   }
 
+  .toolbar-header-row {
+    gap: 12px;
+  }
+
+  .toolbar-header-copy {
+    gap: 8px;
+  }
+
   .pane-header--mobile .pane-title {
     font-size: 1.3rem;
   }
@@ -1112,21 +1240,55 @@ button {
     height: 14px;
   }
 
-  .layout-mode-grid {
+  .layout-mode-grid.layout-mode-grid--compact {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .mode-button {
+    min-height: 36px;
+    padding: 8px 6px;
+  }
+
+  .mode-button__label {
+    font-size: 0.76rem;
+  }
+
+  .layout-mode-grid:not(.layout-mode-grid--compact) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .theme-switch {
-    padding: 12px 14px;
-    align-items: flex-start;
+  .theme-switch__track {
+    width: 52px;
+    height: 30px;
   }
 
-  .theme-switch__copy strong {
-    font-size: 0.92rem;
+  .theme-switch__thumb {
+    width: 20px;
+    height: 20px;
   }
 
-  .theme-switch__copy span {
-    font-size: 0.8rem;
+  .theme-switch__input:checked + .theme-switch__track .theme-switch__thumb {
+    transform: translateX(22px);
+  }
+
+  .canvas-controls {
+    top: 10px;
+    right: 10px;
+    gap: 4px;
+    padding: 5px;
+    border-radius: 12px;
+  }
+
+  .canvas-control-button {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+  }
+
+  .canvas-control-button__icon {
+    width: 14px;
+    height: 14px;
   }
 
   .canvas-surface {

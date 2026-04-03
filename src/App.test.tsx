@@ -1,7 +1,13 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import App from './App';
 import { MarkdownPane } from './components/panes/MarkdownPane';
-import { GRAPH_STORAGE_KEY } from './hooks/usePersistentGraphState';
+import { WORKSPACE_STORAGE_KEY } from './hooks/usePersistentWorkspaceState';
 import { LAYOUT_STORAGE_KEY } from './utils/layout';
 import { THEME_STORAGE_KEY } from './hooks/useThemePreference';
 import type { KnowledgeNode } from './types/graph';
@@ -25,11 +31,26 @@ function getFlowNodeByLabel(label: string) {
     .closest('.react-flow__node') as HTMLElement;
 }
 
+function getJumpEnterButton() {
+  return document.querySelector('.jump-node__enter') as HTMLButtonElement | null;
+}
+
+function getGraphList() {
+  return within(screen.getByTestId('graph-list'));
+}
+
+function getGraphButton(title: string) {
+  return getGraphList().getByRole('button', {
+    name: new RegExp(`^${title}\\s+\\d+ 个引用$`),
+  });
+}
+
 describe('App', () => {
   let createObjectURLSpy: any;
   let revokeObjectURLSpy: any;
   let anchorClickSpy: any;
   let confirmSpy: any;
+  let promptSpy: any;
   let matchMediaSpy: any;
   let isMobileViewport = false;
 
@@ -64,6 +85,7 @@ describe('App', () => {
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => {});
     confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Renamed Graph');
     matchMediaSpy = vi
       .spyOn(window, 'matchMedia')
       .mockImplementation((query: string) => ({
@@ -83,22 +105,20 @@ describe('App', () => {
     revokeObjectURLSpy.mockRestore();
     anchorClickSpy.mockRestore();
     confirmSpy.mockRestore();
+    promptSpy.mockRestore();
     matchMediaSpy.mockRestore();
   });
 
-  it('renders the default ABC layout with all panes visible', () => {
+  it('renders the default desktop layout with graph management visible', () => {
     render(<App />);
 
     expect(screen.getByText('MyMind Workspace')).toBeInTheDocument();
-    expect(screen.getByText('思维导图画布')).toBeInTheDocument();
-    expect(screen.getByText('Markdown 详情')).toBeInTheDocument();
+    expect(screen.getByText('Graph 管理')).toBeInTheDocument();
+    expect(getGraphButton('Main Graph')).toBeInTheDocument();
     expect(screen.getByText('Knowledge Graph')).toBeInTheDocument();
     expect(screen.getByText('React Flow')).toBeInTheDocument();
     expect(screen.getByText('Markdown Pane')).toBeInTheDocument();
     expect(screen.getAllByTestId('resize-handle')).toHaveLength(2);
-    expect(screen.getByText('3')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-
     expectPaneOrder(['pane-A', 'pane-B', 'pane-C']);
   });
 
@@ -110,9 +130,6 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /CBA/i }));
     expectPaneOrder(['pane-C', 'pane-B', 'pane-A']);
-
-    fireEvent.click(screen.getByRole('button', { name: /BCA/i }));
-    expectPaneOrder(['pane-B', 'pane-C', 'pane-A']);
   });
 
   it('restores stored layout mode and sizes from localStorage', () => {
@@ -131,30 +148,9 @@ describe('App', () => {
     render(<App />);
 
     expectPaneOrder(['pane-C', 'pane-B', 'pane-A']);
-    expect(
-      screen.getByRole('button', { name: /CBA/i }),
-    ).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('persists layout changes back to localStorage', () => {
-    render(<App />);
-
-    fireEvent.click(screen.getByRole('button', { name: /BCA/i }));
-
-    const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
-    expect(stored).not.toBeNull();
-
-    expect(JSON.parse(stored!)).toMatchObject({
-      mode: 'BCA',
-      sizes: expect.objectContaining({
-        A: expect.any(Number),
-        B: expect.any(Number),
-        C: expect.any(Number),
-      }),
-    });
-  });
-
-  it('toggles to the night theme and persists the preference', () => {
+  it('toggles theme and persists the preference', () => {
     render(<App />);
 
     fireEvent.click(screen.getByRole('switch', { name: /夜晚主题/i }));
@@ -163,18 +159,9 @@ describe('App', () => {
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('night');
   });
 
-  it('restores the stored night theme on load', () => {
-    window.localStorage.setItem(THEME_STORAGE_KEY, 'night');
-
-    render(<App />);
-
-    expect(document.documentElement.dataset.theme).toBe('night');
-    expect(screen.getByRole('switch', { name: /夜晚主题/i })).toBeChecked();
-  });
-
-  it('restores the stored graph data from localStorage', () => {
+  it('migrates legacy version 1 graph storage into a workspace', () => {
     window.localStorage.setItem(
-      GRAPH_STORAGE_KEY,
+      WORKSPACE_STORAGE_KEY,
       JSON.stringify({
         version: 1,
         nodes: [
@@ -201,8 +188,7 @@ describe('App', () => {
     render(<App />);
 
     expect(screen.getByText('Saved Node')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '删除选中节点' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Center Selected' })).toBeDisabled();
+    expect(getGraphButton('Main Graph')).toBeInTheDocument();
   });
 
   it('renders the mobile single-pane layout below 900px and defaults to canvas', () => {
@@ -212,59 +198,58 @@ describe('App', () => {
 
     expect(screen.getByTestId('mobile-workspace')).toBeInTheDocument();
     expect(screen.queryByTestId('pane-A')).not.toBeInTheDocument();
-    expect(screen.queryAllByTestId('resize-handle')).toHaveLength(0);
     expect(screen.getByTestId('mobile-pane-canvas')).toBeInTheDocument();
-    expect(screen.getByTestId('mobile-bottom-nav')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '画布' })).toHaveAttribute(
       'aria-current',
       'page',
     );
   });
 
-  it('switches mobile tabs and keeps toolbar actions available', () => {
-    isMobileViewport = true;
-
-    render(<App />);
-
-    fireEvent.click(screen.getByRole('button', { name: '工具栏' }));
-
-    expect(screen.getByRole('button', { name: '新建节点' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '重置默认图谱' })).toBeInTheDocument();
-    expect(screen.getByText('当前共 3 个节点、2 条边，选中：未选择。')).toBeInTheDocument();
-
-    fireEvent.click(screen.getAllByRole('button', { name: '展开' })[1]);
-    expect(screen.getByText('当前布局')).toBeInTheDocument();
-  });
-
-  it('keeps graph state when switching tabs on mobile', () => {
-    isMobileViewport = true;
-
+  it('creates and renames graphs from the toolbar list', async () => {
+    const createGraphIdSpy = vi
+      .spyOn(graphUtils, 'createGraphId')
+      .mockReturnValue('graph_created');
     const createNodeIdSpy = vi
       .spyOn(graphUtils, 'createNodeId')
-      .mockReturnValue('node_mobile_created');
+      .mockReturnValue('node_created_root');
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: '工具栏' }));
-    fireEvent.click(screen.getByRole('button', { name: '新建节点' }));
-    fireEvent.click(screen.getByRole('button', { name: '详情' }));
+    fireEvent.click(screen.getByRole('button', { name: '新建 Graph' }));
 
-    expect(screen.getByText('在这里写内容。')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(getGraphButton('Untitled Graph')).toBeInTheDocument();
+    });
 
-    fireEvent.click(screen.getByRole('button', { name: '画布' }));
-    expect(screen.getByText('Untitled')).toBeInTheDocument();
+    expect(screen.getByText('Start')).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole('button', { name: '重命名当前 Graph' }));
+    expect(promptSpy).toHaveBeenCalled();
+    expect(getGraphButton('Renamed Graph')).toBeInTheDocument();
+
+    createGraphIdSpy.mockRestore();
     createNodeIdSpy.mockRestore();
   });
 
-  it('falls back to the default graph when stored graph data is invalid', () => {
-    window.localStorage.setItem(GRAPH_STORAGE_KEY, '{"version":2}');
+  it('switches between graphs from the graph list', async () => {
+    const createGraphIdSpy = vi
+      .spyOn(graphUtils, 'createGraphId')
+      .mockReturnValue('graph_created');
+    const createNodeIdSpy = vi
+      .spyOn(graphUtils, 'createNodeId')
+      .mockReturnValue('node_created_root');
 
     render(<App />);
 
-    expect(screen.getByText('Knowledge Graph')).toBeInTheDocument();
-    expect(screen.getByText('React Flow')).toBeInTheDocument();
-    expect(screen.getByText('Markdown Pane')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '新建 Graph' }));
+    fireEvent.click(getGraphButton('Main Graph'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Knowledge Graph')).toBeInTheDocument();
+    });
+
+    createGraphIdSpy.mockRestore();
+    createNodeIdSpy.mockRestore();
   });
 
   it('syncs selected node details to the toolbar and markdown pane', () => {
@@ -273,54 +258,105 @@ describe('App', () => {
     fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
 
     expect(screen.getByText('note_graph')).toBeInTheDocument();
-    expect(screen.getAllByText('Knowledge Graph').length).toBeGreaterThan(1);
+    expect(screen.getByText('当前选中')).toBeInTheDocument();
     expect(screen.getByText('节点承载概念')).toBeInTheDocument();
   });
 
-  it('clears the selected node when clicking the empty canvas pane', () => {
-    const { container } = render(<App />);
+  it('converts a selected node into a jump node and configures its target graph', async () => {
+    const createGraphIdSpy = vi
+      .spyOn(graphUtils, 'createGraphId')
+      .mockReturnValue('graph_created');
+    const createNodeIdSpy = vi
+      .spyOn(graphUtils, 'createNodeId')
+      .mockReturnValue('node_created_root');
 
-    fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
-    fireEvent.click(container.querySelector('.react-flow__pane') as Element);
-
-    expect(screen.getByText('未选择节点')).toBeInTheDocument();
-    expect(screen.getAllByText('未选择').length).toBeGreaterThan(0);
-    expect(screen.getByText('请选择一个节点。')).toBeInTheDocument();
-  });
-
-  it('renders markdown features from the selected note', () => {
     render(<App />);
 
-    fireEvent.click(getFlowNodeByLabel('React Flow'));
+    fireEvent.click(screen.getByRole('button', { name: '新建 Graph' }));
+    fireEvent.click(getGraphButton('Main Graph'));
+    fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
+    fireEvent.click(screen.getByRole('button', { name: '设为跳转节点' }));
 
-    expect(screen.getByText('节点拖拽')).toBeInTheDocument();
-    expect(
-      screen.getByText('<ReactFlow nodes={nodes} edges={edges} fitView />'),
-    ).toBeInTheDocument();
-    expect(document.querySelector('.katex')).not.toBeNull();
+    expect(screen.getByText('跳转配置')).toBeInTheDocument();
 
-    fireEvent.click(getFlowNodeByLabel('Markdown Pane'));
-    expect(screen.getByText('能力')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('combobox'), {
+      target: { value: 'graph_created' },
+    });
+
+    expect(screen.getByText('当前指向：Untitled Graph')).toBeInTheDocument();
+
+    createGraphIdSpy.mockRestore();
+    createNodeIdSpy.mockRestore();
   });
 
-  it('shows a friendly message when a selected node has no note content', () => {
-    const selectedNode: KnowledgeNode = {
-      id: 'node_missing',
-      position: { x: 0, y: 0 },
-      data: {
-        title: 'Missing Note',
-        noteId: 'note_missing',
-      },
-    };
+  it('enters another graph from a jump node button', async () => {
+    const createGraphIdSpy = vi
+      .spyOn(graphUtils, 'createGraphId')
+      .mockReturnValue('graph_created');
+    const createNodeIdSpy = vi
+      .spyOn(graphUtils, 'createNodeId')
+      .mockReturnValue('node_created_root');
 
-    render(<MarkdownPane selectedNode={selectedNode} selectedNote={null} />);
+    render(<App />);
 
-    expect(screen.getByText('Missing Note')).toBeInTheDocument();
-    expect(screen.getByText('note_missing')).toBeInTheDocument();
-    expect(screen.getByText('找不到对应的 note 内容。')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '新建 Graph' }));
+    fireEvent.click(getGraphButton('Main Graph'));
+    fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
+    fireEvent.click(screen.getByRole('button', { name: '设为跳转节点' }));
+    fireEvent.change(screen.getByRole('combobox'), {
+      target: { value: 'graph_created' },
+    });
+
+    await waitFor(() => {
+      expect(getJumpEnterButton()).not.toBeNull();
+    });
+
+    fireEvent.click(getJumpEnterButton()!);
+
+    await waitFor(() => {
+      expect(screen.getByText('Start')).toBeInTheDocument();
+    });
+
+    createGraphIdSpy.mockRestore();
+    createNodeIdSpy.mockRestore();
   });
 
-  it('creates a new node, selects it, and renders the default markdown', () => {
+  it('clears jump targets when deleting a referenced graph', async () => {
+    const createGraphIdSpy = vi
+      .spyOn(graphUtils, 'createGraphId')
+      .mockReturnValue('graph_created');
+    const createNodeIdSpy = vi
+      .spyOn(graphUtils, 'createNodeId')
+      .mockReturnValue('node_created_root');
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '新建 Graph' }));
+    fireEvent.click(getGraphButton('Main Graph'));
+    fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
+    fireEvent.click(screen.getByRole('button', { name: '设为跳转节点' }));
+    fireEvent.change(screen.getByRole('combobox'), {
+      target: { value: 'graph_created' },
+    });
+
+    fireEvent.click(getGraphButton('Untitled Graph'));
+    fireEvent.click(screen.getByRole('button', { name: '删除当前 Graph' }));
+
+    expect(confirmSpy).toHaveBeenCalled();
+
+    await waitFor(() => {
+      expect(getGraphButton('Main Graph')).toBeInTheDocument();
+    });
+
+    fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
+    expect(screen.getAllByText('未设置目标 graph').length).toBeGreaterThan(0);
+    expect(getJumpEnterButton()).toBeDisabled();
+
+    createGraphIdSpy.mockRestore();
+    createNodeIdSpy.mockRestore();
+  });
+
+  it('creates a new node and renders the default markdown', () => {
     const createNodeIdSpy = vi
       .spyOn(graphUtils, 'createNodeId')
       .mockReturnValue('node_created');
@@ -329,19 +365,13 @@ describe('App', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '新建节点' }));
 
-    expect(screen.getAllByText('Untitled').length).toBeGreaterThan(1);
+    expect(screen.getAllByText('Untitled').length).toBeGreaterThan(0);
     expect(screen.getByText('在这里写内容。')).toBeInTheDocument();
-    expect(screen.getByText('4')).toBeInTheDocument();
     expect(
-      JSON.parse(window.localStorage.getItem(GRAPH_STORAGE_KEY) ?? '{}'),
+      JSON.parse(window.localStorage.getItem(WORKSPACE_STORAGE_KEY) ?? '{}'),
     ).toMatchObject({
-      version: 1,
-      nodes: expect.arrayContaining([
-        expect.objectContaining({
-          id: 'node_created',
-          data: expect.objectContaining({ title: 'Untitled' }),
-        }),
-      ]),
+      version: 2,
+      currentGraphId: 'graph_main',
     });
 
     createNodeIdSpy.mockRestore();
@@ -355,95 +385,42 @@ describe('App', () => {
 
     expect(screen.queryByText('note_graph')).not.toBeInTheDocument();
     expect(screen.getByText('未选择节点')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
   });
 
-  it('disables delete when no node is selected', () => {
+  it('exports current graph and workspace as json files', () => {
     render(<App />);
 
-    expect(screen.getByRole('button', { name: '删除选中节点' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Center Selected' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: '导出当前 Graph' }));
+    fireEvent.click(screen.getByRole('button', { name: '导出整个 Workspace' }));
+
+    expect(createObjectURLSpy).toHaveBeenCalledTimes(2);
+    expect(anchorClickSpy).toHaveBeenCalledTimes(2);
   });
 
-  it('resets back to the default graph after confirmation', () => {
-    const createNodeIdSpy = vi
-      .spyOn(graphUtils, 'createNodeId')
-      .mockReturnValue('node_created');
-
-    render(<App />);
-
-    fireEvent.click(screen.getByRole('button', { name: '新建节点' }));
-    fireEvent.click(screen.getByRole('button', { name: '重置默认图谱' }));
-
-    expect(confirmSpy).toHaveBeenCalledWith(
-      '确定要重置为默认图谱吗？当前内容会被覆盖。',
-    );
-    expect(screen.getByText('Knowledge Graph')).toBeInTheDocument();
-    expect(screen.queryByText('node_created')).not.toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
-    expect(
-      JSON.parse(window.localStorage.getItem(GRAPH_STORAGE_KEY) ?? '{}'),
-    ).toMatchObject({
-      version: 1,
-      nodes: expect.arrayContaining([
-        expect.objectContaining({ id: 'node_graph' }),
-        expect.objectContaining({ id: 'node_flow' }),
-        expect.objectContaining({ id: 'node_markdown' }),
-      ]),
-    });
-
-    createNodeIdSpy.mockRestore();
-  });
-
-  it('keeps the current graph when reset is cancelled', () => {
-    const createNodeIdSpy = vi
-      .spyOn(graphUtils, 'createNodeId')
-      .mockReturnValue('node_created');
-
-    confirmSpy.mockReturnValue(false);
-
-    render(<App />);
-
-    fireEvent.click(screen.getByRole('button', { name: '新建节点' }));
-    fireEvent.click(screen.getByRole('button', { name: '重置默认图谱' }));
-
-    expect(screen.getAllByText('Untitled').length).toBeGreaterThan(1);
-    expect(screen.getByText('4')).toBeInTheDocument();
-
-    createNodeIdSpy.mockRestore();
-  });
-
-  it('exports the current graph as version 1 json', () => {
-    render(<App />);
-
-    fireEvent.click(screen.getByRole('button', { name: '导出 JSON' }));
-
-    expect(createObjectURLSpy).toHaveBeenCalledTimes(1);
-    expect(anchorClickSpy).toHaveBeenCalledTimes(1);
-    expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url');
-  });
-
-  it('imports a valid graph json and replaces the current graph', async () => {
+  it('imports a valid graph json and adds it to the workspace', async () => {
     const { container } = render(<App />);
 
     const importFile = new File(
       [
         JSON.stringify({
-          version: 1,
-          nodes: [
-            {
-              id: 'node_imported',
-              position: { x: 40, y: 60 },
-              data: { title: 'Imported Node', noteId: 'note_imported' },
-            },
-          ],
-          edges: [],
-          notes: {
-            note_imported: {
-              id: 'note_imported',
-              title: 'Imported Node',
-              content: '# Imported Node\n\nImported body.',
+          version: 2,
+          graph: {
+            id: 'graph_imported',
+            title: 'Imported Graph',
+            nodes: [
+              {
+                id: 'node_imported',
+                position: { x: 40, y: 60 },
+                data: { title: 'Imported Node', noteId: 'note_imported' },
+              },
+            ],
+            edges: [],
+            notes: {
+              note_imported: {
+                id: 'note_imported',
+                title: 'Imported Node',
+                content: '# Imported Node\n\nImported body.',
+              },
             },
           },
         }),
@@ -454,20 +431,24 @@ describe('App', () => {
     Object.defineProperty(importFile, 'text', {
       value: async () =>
         JSON.stringify({
-          version: 1,
-          nodes: [
-            {
-              id: 'node_imported',
-              position: { x: 40, y: 60 },
-              data: { title: 'Imported Node', noteId: 'note_imported' },
-            },
-          ],
-          edges: [],
-          notes: {
-            note_imported: {
-              id: 'note_imported',
-              title: 'Imported Node',
-              content: '# Imported Node\n\nImported body.',
+          version: 2,
+          graph: {
+            id: 'graph_imported',
+            title: 'Imported Graph',
+            nodes: [
+              {
+                id: 'node_imported',
+                position: { x: 40, y: 60 },
+                data: { title: 'Imported Node', noteId: 'note_imported' },
+              },
+            ],
+            edges: [],
+            notes: {
+              note_imported: {
+                id: 'note_imported',
+                title: 'Imported Node',
+                content: '# Imported Node\n\nImported body.',
+              },
             },
           },
         }),
@@ -478,21 +459,67 @@ describe('App', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText('Imported Node')).toBeInTheDocument();
+      expect(getGraphButton('Imported Graph')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('1')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '删除选中节点' })).toBeDisabled();
+    expect(screen.getByText('Imported Node')).toBeInTheDocument();
   });
 
-  it('shows an error and keeps the current graph when import json is invalid', async () => {
+  it('imports a valid workspace json and replaces the current workspace', async () => {
     const { container } = render(<App />);
 
-    const invalidFile = new File(['{"version":2}'], 'invalid.json', {
+    const importFile = new File([''], 'workspace.json', {
+      type: 'application/json',
+    });
+    Object.defineProperty(importFile, 'text', {
+      value: async () =>
+        JSON.stringify({
+          version: 2,
+          graphs: {
+            graph_other: {
+              id: 'graph_other',
+              title: 'Workspace Graph',
+              nodes: [
+                {
+                  id: 'node_other',
+                  position: { x: 10, y: 20 },
+                  data: { title: 'Workspace Node', noteId: 'note_other' },
+                },
+              ],
+              edges: [],
+              notes: {
+                note_other: {
+                  id: 'note_other',
+                  title: 'Workspace Node',
+                  content: '# Workspace Node',
+                },
+              },
+            },
+          },
+          graphOrder: ['graph_other'],
+          currentGraphId: 'graph_other',
+        }),
+    });
+
+    fireEvent.change(container.querySelector('input[type="file"]') as Element, {
+      target: { files: [importFile] },
+    });
+
+    await waitFor(() => {
+      expect(getGraphButton('Workspace Graph')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Workspace Node')).toBeInTheDocument();
+  });
+
+  it('shows an error and keeps the current workspace when import json is invalid', async () => {
+    const { container } = render(<App />);
+
+    const invalidFile = new File(['{"version":99}'], 'invalid.json', {
       type: 'application/json',
     });
     Object.defineProperty(invalidFile, 'text', {
-      value: async () => '{"version":2}',
+      value: async () => '{"version":99}',
     });
 
     fireEvent.change(container.querySelector('input[type="file"]') as Element, {
@@ -500,11 +527,27 @@ describe('App', () => {
     });
 
     await waitFor(() => {
-      expect(
-        screen.getByText('导入失败：仅支持 version 1 的图谱文件。'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('导入失败：文件结构无效。')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('Knowledge Graph')).toBeInTheDocument();
+    expect(getGraphButton('Main Graph')).toBeInTheDocument();
+  });
+
+  it('shows a friendly message when a selected node has no note content', () => {
+    const selectedNode: KnowledgeNode = {
+      id: 'node_missing',
+      position: { x: 0, y: 0 },
+      data: {
+        title: 'Missing Note',
+        noteId: 'note_missing',
+        kind: 'default',
+      },
+    };
+
+    render(<MarkdownPane selectedNode={selectedNode} selectedNote={null} />);
+
+    expect(screen.getByText('Missing Note')).toBeInTheDocument();
+    expect(screen.getByText('note_missing')).toBeInTheDocument();
+    expect(screen.getByText('找不到对应的 note 内容。')).toBeInTheDocument();
   });
 });

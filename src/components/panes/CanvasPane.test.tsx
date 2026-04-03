@@ -16,6 +16,11 @@ vi.mock('@xyflow/react', async () => {
   const { createElement } = await import('react');
 
   return {
+    Handle: () => null,
+    Position: {
+      Left: 'left',
+      Right: 'right',
+    },
     ReactFlow: ({
       children,
       className,
@@ -81,14 +86,17 @@ describe('CanvasPane viewport bridge', () => {
       data: {
         title: 'Focus Node',
         noteId: 'note_focus',
+        kind: 'default',
       },
     };
 
     const { container } = render(
       <CanvasPane
+        currentGraphId="graph_focus"
         edges={[]}
         nodes={[node]}
         onEdgesChange={() => {}}
+        onEnterLinkedGraph={() => {}}
         onNodesChange={() => {}}
         onSelectNode={() => {}}
         onViewportApiReady={(api) => {

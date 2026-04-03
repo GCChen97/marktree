@@ -1,18 +1,22 @@
 import {
+  Position,
   ReactFlow,
   applyEdgeChanges,
   applyNodeChanges,
   useReactFlow,
 } from '@xyflow/react';
-import { useEffect } from 'react';
-import type { OnEdgesChange, OnNodesChange } from '@xyflow/react';
+import { useEffect, useMemo } from 'react';
+import type { NodeTypes, OnEdgesChange, OnNodesChange } from '@xyflow/react';
+import { JumpNode } from '../canvas/JumpNode';
 import type {
   CanvasViewportApi,
+  GraphId,
   KnowledgeEdge,
   KnowledgeNode,
 } from '../../types/graph';
 
 type CanvasPaneProps = {
+  currentGraphId: GraphId;
   nodes: KnowledgeNode[];
   edges: KnowledgeEdge[];
   selectedNodeId: string | null;
@@ -20,6 +24,7 @@ type CanvasPaneProps = {
   onEdgesChange: (edges: KnowledgeEdge[]) => void;
   onSelectNode: (nodeId: string | null) => void;
   onViewportApiReady: (api: CanvasViewportApi | null) => void;
+  onEnterLinkedGraph: (targetGraphId: GraphId) => void;
   isMobile?: boolean;
 };
 
@@ -84,7 +89,12 @@ function CanvasViewportBridge({
   return null;
 }
 
+const nodeTypes: NodeTypes = {
+  jump: JumpNode,
+};
+
 export function CanvasPane({
+  currentGraphId,
   nodes,
   edges,
   selectedNodeId,
@@ -92,16 +102,40 @@ export function CanvasPane({
   onEdgesChange,
   onSelectNode,
   onViewportApiReady,
+  onEnterLinkedGraph,
   isMobile = false,
 }: CanvasPaneProps) {
-  const displayNodes = nodes.map((node) => ({
-    ...node,
-    data: {
-      ...node.data,
-      label: node.data.title,
-    },
-    selected: node.id === selectedNodeId,
-  }));
+  const displayNodes = useMemo(
+    () =>
+      nodes.map((node) => {
+        const targetGraphId = node.data.jumpLink?.targetGraphId ?? null;
+
+        return {
+          ...node,
+          type: node.data.kind === 'jump' ? 'jump' : node.type,
+          data: {
+            ...node.data,
+            label: node.data.title,
+            onEnterLinkedGraph,
+          },
+          selected: node.id === selectedNodeId,
+          draggable: true,
+          sourcePosition: node.sourcePosition ?? Position.Right,
+          targetPosition: node.targetPosition ?? Position.Left,
+          ...(node.data.kind === 'jump' && targetGraphId === currentGraphId
+            ? {
+                data: {
+                  ...node.data,
+                  label: node.data.title,
+                  onEnterLinkedGraph,
+                  targetGraphMissing: true,
+                },
+              }
+            : {}),
+        };
+      }),
+    [currentGraphId, nodes, onEnterLinkedGraph, selectedNodeId],
+  );
 
   const handleNodesChange: OnNodesChange<KnowledgeNode> = (changes) => {
     onNodesChange(applyNodeChanges(changes, nodes));
@@ -119,10 +153,10 @@ export function CanvasPane({
       <header
         className={`pane-header pane-header--compact${isMobile ? ' pane-header--mobile' : ''}`}
       >
-        <p className="pane-eyebrow">Phase 4</p>
+        <p className="pane-eyebrow">Phase 6</p>
         <h2 className="pane-title">思维导图画布</h2>
         <p className="pane-description">
-          React Flow 已接入，当前支持拖拽、缩放、平移、节点选中与工具栏视图控制。
+          当前 graph 的节点、跳转节点与引用关系都在这里呈现，支持跨 graph 进入。
         </p>
       </header>
 
@@ -132,6 +166,7 @@ export function CanvasPane({
           data-testid="react-flow-canvas"
           edges={edges}
           fitView
+          nodeTypes={nodeTypes}
           nodes={displayNodes}
           onEdgesChange={handleEdgesChange}
           onNodeClick={(_, node) => onSelectNode(node.id)}

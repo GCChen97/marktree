@@ -1,7 +1,16 @@
-import type { GraphState } from '../types/graph';
+import type {
+  GraphDocument,
+  GraphId,
+  NoteRecord,
+  WorkspaceState,
+} from '../types/graph';
 
-export function createDefaultGraphState(): GraphState {
+export const DEFAULT_WORKSPACE_GRAPH_ID = 'graph_main';
+
+export function createDefaultGraphDocument(): GraphDocument {
   return {
+    id: DEFAULT_WORKSPACE_GRAPH_ID,
+    title: 'Main Graph',
     nodes: [
       {
         id: 'node_graph',
@@ -9,6 +18,7 @@ export function createDefaultGraphState(): GraphState {
         data: {
           title: 'Knowledge Graph',
           noteId: 'note_graph',
+          kind: 'default',
         },
       },
       {
@@ -17,6 +27,7 @@ export function createDefaultGraphState(): GraphState {
         data: {
           title: 'React Flow',
           noteId: 'note_flow',
+          kind: 'default',
         },
       },
       {
@@ -25,6 +36,7 @@ export function createDefaultGraphState(): GraphState {
         data: {
           title: 'Markdown Pane',
           noteId: 'note_markdown',
+          kind: 'default',
         },
       },
     ],
@@ -108,6 +120,54 @@ $$`,
 3. 最后接入持久化`,
       },
     },
-    selectedNodeId: null,
+  };
+}
+
+export function createDefaultWorkspaceState(): WorkspaceState {
+  const defaultGraph = createDefaultGraphDocument();
+
+  return {
+    version: 2,
+    graphs: {
+      [defaultGraph.id]: defaultGraph,
+    },
+    graphOrder: [defaultGraph.id],
+    currentGraphId: defaultGraph.id,
+  };
+}
+
+export function createStartNote(noteId: string): NoteRecord {
+  return {
+    id: noteId,
+    title: 'Start',
+    content: `# Start
+
+从这里开始搭建新的 graph。`,
+  };
+}
+
+export function createNewGraphDocument(
+  graphId: GraphId,
+  title: string,
+  rootNodeId: string,
+): GraphDocument {
+  return {
+    id: graphId,
+    title,
+    nodes: [
+      {
+        id: rootNodeId,
+        position: { x: 220, y: 160 },
+        data: {
+          title: 'Start',
+          noteId: rootNodeId,
+          kind: 'default',
+        },
+      },
+    ],
+    edges: [],
+    notes: {
+      [rootNodeId]: createStartNote(rootNodeId),
+    },
   };
 }

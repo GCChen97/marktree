@@ -1,6 +1,7 @@
 import type { Connection, Edge, Node } from '@xyflow/react';
 
 export type GraphId = string;
+export type NoteId = string;
 
 export type JumpLinkData = {
   targetGraphId: GraphId | null;
@@ -8,7 +9,7 @@ export type JumpLinkData = {
 
 export type KnowledgeNodeData = {
   title: string;
-  noteId: string;
+  noteId: NoteId | null;
   kind?: 'default' | 'jump';
   jumpLink?: JumpLinkData;
   label?: string;
@@ -16,6 +17,10 @@ export type KnowledgeNodeData = {
   targetGraphMissing?: boolean;
   canEnterLinkedGraph?: boolean;
   onEnterLinkedGraph?: ((targetGraphId: GraphId) => void) | null;
+  isEditingTitle?: boolean;
+  onStartTitleEdit?: ((nodeId: string) => void) | null;
+  onCommitTitleEdit?: ((nodeId: string, title: string) => void) | null;
+  onCancelTitleEdit?: (() => void) | null;
 };
 
 export type KnowledgeNode = Node<KnowledgeNodeData>;
@@ -23,7 +28,7 @@ export type KnowledgeNode = Node<KnowledgeNodeData>;
 export type KnowledgeEdge = Edge;
 
 export type NoteRecord = {
-  id: string;
+  id: NoteId;
   title: string;
   content: string;
 };
@@ -33,13 +38,14 @@ export type GraphDocument = {
   title: string;
   nodes: KnowledgeNode[];
   edges: KnowledgeEdge[];
-  notes: Record<string, NoteRecord>;
 };
 
 export type WorkspaceState = {
-  version: 2;
+  version: 3;
   graphs: Record<GraphId, GraphDocument>;
+  notes: Record<NoteId, NoteRecord>;
   graphOrder: GraphId[];
+  noteOrder: NoteId[];
   currentGraphId: GraphId;
 };
 
@@ -48,16 +54,10 @@ export type AppState = {
   selectedNodeId: string | null;
 };
 
-export type LegacyGraphData = {
-  version: 1;
-  nodes: KnowledgeNode[];
-  edges: KnowledgeEdge[];
-  notes: Record<string, NoteRecord>;
-};
-
 export type ExportedGraphData = {
-  version: 2;
+  version: 3;
   graph: GraphDocument;
+  notes: Record<NoteId, NoteRecord>;
 };
 
 export type ExportedWorkspaceData = WorkspaceState;

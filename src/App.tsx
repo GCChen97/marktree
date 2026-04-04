@@ -16,22 +16,28 @@ import type {
   GraphReferenceRecord,
   KnowledgeEdge,
   KnowledgeNode,
+  NoteId,
   NoteRecord,
+  WorkspaceState,
 } from './types/graph';
 import type { MobilePaneTab } from './types/layout';
 import {
   DEFAULT_NEW_GRAPH_TITLE,
+  DEFAULT_NEW_MARKDOWN_TITLE,
   DEFAULT_NEW_NODE_POSITION,
-  assignImportedGraphId,
+  assignImportedGraphBundle,
   buildGraphReferenceIndex,
+  buildNoteUsageIndex,
   clearGraphReferences,
-  createEdgeId,
   createDefaultNodeAtPosition,
   createDefaultNoteForNode,
+  createEdgeId,
   createGraphId,
   createNodeId,
+  createNoteId,
   exportCurrentGraphData,
   exportWorkspaceData,
+  getUniqueMarkdownTitle,
   parseImportedData,
 } from './utils/graph';
 
@@ -63,6 +69,42 @@ function getNextGraphIdAfterDeletion(
   return graphOrder[currentIndex - 1] ?? null;
 }
 
+function buildDeleteGraphMessage(
+  graphTitle: string,
+  records: GraphReferenceRecord[],
+) {
+  const referringTitles = [...new Set(records.map((record) => record.sourceGraphTitle))];
+
+  if (referringTitles.length === 0) {
+    return `确定要删除 graph「${graphTitle}」吗？`;
+  }
+
+  return [
+    `以下 graph 正在引用「${graphTitle}」：`,
+    ...referringTitles.map((title) => `- ${title}`),
+    '',
+    '删除后，这些跳转节点会失去目标 graph。',
+    '确定继续删除吗？',
+  ].join('\n');
+}
+
+function buildDeleteMarkdownMessage(
+  noteTitle: string,
+  records: Array<{ graphTitle: string; nodeTitle: string }>,
+) {
+  if (records.length === 0) {
+    return `确定要删除 Markdown「${noteTitle}」吗？`;
+  }
+
+  return [
+    `Markdown「${noteTitle}」当前仍被以下节点使用：`,
+    ...records.map((record) => `- ${record.graphTitle} / ${record.nodeTitle}`),
+    '',
+    '删除后，这些节点会失去 markdown 关联。',
+    '确定继续删除吗？',
+  ].join('\n');
+}
+
 function App() {
   const { mode, sizes, setMode, setSizes } = usePersistentLayoutState();
   const { workspace, setWorkspace } = usePersistentWorkspaceState();
@@ -71,6 +113,8 @@ function App() {
   const [canvasViewportApi, setCanvasViewportApi] =
     useState<CanvasViewportApi | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [activeMarkdownId, setActiveMarkdownId] = useState<NoteId | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [mobileActiveTab, setMobileActiveTab] =
     useState<MobilePaneTab>('canvas');
@@ -84,17 +128,25 @@ function App() {
     [workspace],
   );
 
+  const noteUsageIndex = useMemo(
+    () => buildNoteUsageIndex(workspace),
+    [workspace],
+  );
+
   const selectedNode = useMemo(
     () => currentGraph?.nodes.find((node) => node.id === selectedNodeId) ?? null,
     [currentGraph, selectedNodeId],
   );
+
   const selectedNote = useMemo<NoteRecord | null>(() => {
-    if (!selectedNode || !currentGraph) {
+    const noteId = selectedNode?.data.noteId;
+
+    if (!noteId) {
       return null;
     }
 
-    return currentGraph.notes[selectedNode.data.noteId] ?? null;
-  }, [currentGraph, selectedNode]);
+    return workspace.notes[noteId] ?? null;
+  }, [selectedNode, workspace.notes]);
 
   const graphItems = useMemo(
     () =>
@@ -105,6 +157,24 @@ function App() {
         incomingReferenceCount: referenceIndex[graphId]?.length ?? 0,
       })),
     [referenceIndex, workspace.currentGraphId, workspace.graphOrder, workspace.graphs],
+  );
+
+  const markdownItems = useMemo(
+    () =>
+      workspace.noteOrder.map((noteId) => ({
+        id: noteId,
+        title: workspace.notes[noteId]?.title ?? noteId,
+        usageCount: noteUsageIndex[noteId]?.length ?? 0,
+        isActive: noteId === activeMarkdownId,
+        isLinkedToSelectedNode: noteId === (selectedNode?.data.noteId ?? null),
+      })),
+    [
+      activeMarkdownId,
+      noteUsageIndex,
+      selectedNode,
+      workspace.noteOrder,
+      workspace.notes,
+    ],
   );
 
   const availableJumpTargetGraphs = useMemo(
@@ -123,23 +193,31 @@ function App() {
       ? selectedNode.data.jumpLink?.targetGraphId ?? null
       : null;
 
-  const jumpTargetStatus = useMemo(() => {
-    if (selectedNode?.data.kind !== 'jump') {
-      return null;
-    }
+  const applyWorkspaceMutation = useCallback(
+    (
+      updater: (currentWorkspace: WorkspaceState) => WorkspaceState,
+      nextUiState?: {
+        selectedNodeId?: string | null;
+        editingNodeId?: string | null;
+        activeMarkdownId?: NoteId | null;
+      },
+    ) => {
+      setWorkspace((currentWorkspace) => updater(currentWorkspace));
 
-    const targetGraphId = selectedNode.data.jumpLink?.targetGraphId ?? null;
+      if (nextUiState && 'selectedNodeId' in nextUiState) {
+        setSelectedNodeId(nextUiState.selectedNodeId ?? null);
+      }
 
-    if (!targetGraphId) {
-      return '未设置目标 graph';
-    }
+      if (nextUiState && 'editingNodeId' in nextUiState) {
+        setEditingNodeId(nextUiState.editingNodeId ?? null);
+      }
 
-    if (workspace.graphs[targetGraphId]) {
-      return `当前指向：${workspace.graphs[targetGraphId].title}`;
-    }
-
-    return '目标 graph 不存在';
-  }, [selectedNode, workspace.graphs]);
+      if (nextUiState && 'activeMarkdownId' in nextUiState) {
+        setActiveMarkdownId(nextUiState.activeMarkdownId ?? null);
+      }
+    },
+    [setWorkspace],
+  );
 
   useEffect(() => {
     if (viewportMode === 'mobile') {
@@ -153,53 +231,70 @@ function App() {
       !currentGraph?.nodes.some((node) => node.id === selectedNodeId)
     ) {
       setSelectedNodeId(null);
+      setEditingNodeId(null);
     }
   }, [currentGraph, selectedNodeId]);
 
-  const updateCurrentGraph = useCallback(
-    (
-      updater: (graph: typeof currentGraph) => typeof currentGraph,
-      nextSelectedNodeId?: string | null,
-    ) => {
-      if (!currentGraph) {
-        return;
+  useEffect(() => {
+    if (selectedNode) {
+      setActiveMarkdownId(selectedNode.data.noteId ?? null);
+    }
+  }, [selectedNode]);
+
+  useEffect(() => {
+    if (activeMarkdownId && !workspace.notes[activeMarkdownId]) {
+      setActiveMarkdownId(null);
+    }
+  }, [activeMarkdownId, workspace.notes]);
+
+  function updateCurrentGraphNodes(nodes: KnowledgeNode[]) {
+    applyWorkspaceMutation((currentWorkspace) => {
+      const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+      if (!graph) {
+        return currentWorkspace;
       }
 
-      setWorkspace((currentWorkspace) => {
-        const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
-
-        if (!graph) {
-          return currentWorkspace;
-        }
-
-        return {
-          ...currentWorkspace,
-          graphs: {
-            ...currentWorkspace.graphs,
-            [graph.id]: updater(graph),
+      return {
+        ...currentWorkspace,
+        graphs: {
+          ...currentWorkspace.graphs,
+          [graph.id]: {
+            ...graph,
+            nodes,
           },
-        };
-      });
+        },
+      };
+    });
+  }
 
-      if (nextSelectedNodeId !== undefined) {
-        setSelectedNodeId(nextSelectedNodeId);
+  function updateCurrentGraphEdges(edges: KnowledgeEdge[]) {
+    applyWorkspaceMutation((currentWorkspace) => {
+      const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+      if (!graph) {
+        return currentWorkspace;
       }
-    },
-    [currentGraph, setWorkspace],
-  );
+
+      return {
+        ...currentWorkspace,
+        graphs: {
+          ...currentWorkspace.graphs,
+          [graph.id]: {
+            ...graph,
+            edges,
+          },
+        },
+      };
+    });
+  }
 
   function handleNodesChange(nodes: KnowledgeNode[]) {
-    updateCurrentGraph((graph) => ({
-      ...graph,
-      nodes,
-    }));
+    updateCurrentGraphNodes(nodes);
   }
 
   function handleEdgesChange(edges: KnowledgeEdge[]) {
-    updateCurrentGraph((graph) => ({
-      ...graph,
-      edges,
-    }));
+    updateCurrentGraphEdges(edges);
   }
 
   function handleConnectEdge(connection: Connection) {
@@ -220,19 +315,84 @@ function App() {
       ...(connection.targetHandle ? { targetHandle: connection.targetHandle } : {}),
     };
 
-    updateCurrentGraph((graph) => ({
-      ...graph,
-      edges: [...graph.edges, nextEdge],
-    }));
+    applyWorkspaceMutation((currentWorkspace) => {
+      const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+      if (!graph) {
+        return currentWorkspace;
+      }
+
+      return {
+        ...currentWorkspace,
+        graphs: {
+          ...currentWorkspace.graphs,
+          [graph.id]: {
+            ...graph,
+            edges: [...graph.edges, nextEdge],
+          },
+        },
+      };
+    });
   }
 
   function handleSelectNode(nodeId: string | null) {
     setSelectedNodeId(nodeId);
+
+    if (nodeId !== editingNodeId) {
+      setEditingNodeId(null);
+    }
+  }
+
+  function handleStartNodeTitleEdit(nodeId: string) {
+    setSelectedNodeId(nodeId);
+    setEditingNodeId(nodeId);
+  }
+
+  function handleCommitNodeTitleEdit(nodeId: string, title: string) {
+    applyWorkspaceMutation(
+      (currentWorkspace) => {
+        const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+        if (!graph) {
+          return currentWorkspace;
+        }
+
+        return {
+          ...currentWorkspace,
+          graphs: {
+            ...currentWorkspace.graphs,
+            [graph.id]: {
+              ...graph,
+              nodes: graph.nodes.map((node) =>
+                node.id === nodeId
+                  ? {
+                      ...node,
+                      data: {
+                        ...node.data,
+                        title,
+                      },
+                    }
+                  : node,
+              ),
+            },
+          },
+        };
+      },
+      {
+        selectedNodeId: nodeId,
+        editingNodeId: null,
+      },
+    );
+  }
+
+  function handleCancelNodeTitleEdit() {
+    setEditingNodeId(null);
   }
 
   function handleSelectGraph(graphId: GraphId) {
     setImportError(null);
     setSelectedNodeId(null);
+    setEditingNodeId(null);
     setWorkspace((currentWorkspace) => ({
       ...currentWorkspace,
       currentGraphId: graphId,
@@ -242,23 +402,45 @@ function App() {
   function handleCreateGraph() {
     const graphId = createGraphId();
     const rootNodeId = createNodeId();
-    const nextGraph = createNewGraphDocument(
-      graphId,
-      DEFAULT_NEW_GRAPH_TITLE,
-      rootNodeId,
-    );
+    const rootNoteId = createNoteId();
 
-    setImportError(null);
-    setSelectedNodeId(null);
-    setWorkspace((currentWorkspace) => ({
-      ...currentWorkspace,
-      graphs: {
-        ...currentWorkspace.graphs,
-        [graphId]: nextGraph,
+    applyWorkspaceMutation(
+      (currentWorkspace) => {
+        const rootNoteTitle = getUniqueMarkdownTitle(
+          currentWorkspace.notes,
+          currentWorkspace.noteOrder,
+          'Start',
+        );
+        const nextGraph = createNewGraphDocument(
+          graphId,
+          DEFAULT_NEW_GRAPH_TITLE,
+          rootNodeId,
+          rootNoteId,
+        );
+        const nextNote = createDefaultNoteForNode(rootNoteId, rootNoteTitle);
+
+        return {
+          ...currentWorkspace,
+          graphs: {
+            ...currentWorkspace.graphs,
+            [graphId]: nextGraph,
+          },
+          notes: {
+            ...currentWorkspace.notes,
+            [rootNoteId]: nextNote,
+          },
+          graphOrder: [...currentWorkspace.graphOrder, graphId],
+          noteOrder: [...currentWorkspace.noteOrder, rootNoteId],
+          currentGraphId: graphId,
+        };
       },
-      graphOrder: [...currentWorkspace.graphOrder, graphId],
-      currentGraphId: graphId,
-    }));
+      {
+        selectedNodeId: null,
+        editingNodeId: null,
+        activeMarkdownId: rootNoteId,
+      },
+    );
+    setImportError(null);
   }
 
   function handleRenameCurrentGraph() {
@@ -287,22 +469,6 @@ function App() {
     }));
   }
 
-  function buildDeleteGraphMessage(records: GraphReferenceRecord[]) {
-    const referringTitles = [...new Set(records.map((record) => record.sourceGraphTitle))];
-
-    if (referringTitles.length === 0 || !currentGraph) {
-      return `确定要删除 graph「${currentGraph?.title ?? ''}」吗？`;
-    }
-
-    return [
-      `以下 graph 正在引用「${currentGraph.title}」：`,
-      ...referringTitles.map((title) => `- ${title}`),
-      '',
-      '删除后，这些跳转节点会失去目标 graph。',
-      '确定继续删除吗？',
-    ].join('\n');
-  }
-
   function handleDeleteCurrentGraph() {
     if (!currentGraph || workspace.graphOrder.length <= 1) {
       return;
@@ -310,12 +476,13 @@ function App() {
 
     const incomingReferences = referenceIndex[currentGraph.id] ?? [];
 
-    if (!window.confirm(buildDeleteGraphMessage(incomingReferences))) {
+    if (!window.confirm(buildDeleteGraphMessage(currentGraph.title, incomingReferences))) {
       return;
     }
 
     setImportError(null);
     setSelectedNodeId(null);
+    setEditingNodeId(null);
     setWorkspace((currentWorkspace) => {
       const cleanedWorkspace = clearGraphReferences(
         currentWorkspace,
@@ -342,24 +509,186 @@ function App() {
   }
 
   function handleCreateNode() {
-    const nodeId = createNodeId();
     const position =
       canvasViewportApi?.getCanvasCenterPosition() ?? DEFAULT_NEW_NODE_POSITION;
-    const nextNode = createDefaultNodeAtPosition(nodeId, position);
-    const nextNote = createDefaultNoteForNode(nodeId);
+    const nodeId = createNodeId();
+    const noteId = createNoteId();
 
-    setImportError(null);
-    updateCurrentGraph(
-      (graph) => ({
-        ...graph,
-        nodes: [...graph.nodes, nextNode],
-        notes: {
-          ...graph.notes,
-          [nodeId]: nextNote,
-        },
-      }),
-      nodeId,
+    applyWorkspaceMutation(
+      (currentWorkspace) => {
+        const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+        if (!graph) {
+          return currentWorkspace;
+        }
+
+        const noteTitle = getUniqueMarkdownTitle(
+          currentWorkspace.notes,
+          currentWorkspace.noteOrder,
+          DEFAULT_NEW_MARKDOWN_TITLE,
+        );
+        const note = createDefaultNoteForNode(noteId, noteTitle);
+        const node = createDefaultNodeAtPosition(nodeId, noteId, position);
+
+        return {
+          ...currentWorkspace,
+          graphs: {
+            ...currentWorkspace.graphs,
+            [graph.id]: {
+              ...graph,
+              nodes: [...graph.nodes, node],
+            },
+          },
+          notes: {
+            ...currentWorkspace.notes,
+            [noteId]: note,
+          },
+          noteOrder: [...currentWorkspace.noteOrder, noteId],
+        };
+      },
+      {
+        selectedNodeId: nodeId,
+        activeMarkdownId: noteId,
+      },
     );
+    setImportError(null);
+  }
+
+  function handleCreateChildNodeFromSelection() {
+    if (!selectedNode || !currentGraph) {
+      return;
+    }
+
+    const nodeId = createNodeId();
+    const noteId = createNoteId();
+
+    applyWorkspaceMutation(
+      (currentWorkspace) => {
+        const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+        if (!graph) {
+          return currentWorkspace;
+        }
+
+        const noteTitle = getUniqueMarkdownTitle(
+          currentWorkspace.notes,
+          currentWorkspace.noteOrder,
+          DEFAULT_NEW_MARKDOWN_TITLE,
+        );
+        const note = createDefaultNoteForNode(noteId, noteTitle);
+        const node = createDefaultNodeAtPosition(nodeId, noteId, {
+          x: selectedNode.position.x + 240,
+          y: selectedNode.position.y + 120,
+        });
+        const nextEdge: KnowledgeEdge = {
+          id: createEdgeId(selectedNode.id, nodeId),
+          source: selectedNode.id,
+          target: nodeId,
+        };
+
+        return {
+          ...currentWorkspace,
+          graphs: {
+            ...currentWorkspace.graphs,
+            [graph.id]: {
+              ...graph,
+              nodes: [...graph.nodes, node],
+              edges: [...graph.edges, nextEdge],
+            },
+          },
+          notes: {
+            ...currentWorkspace.notes,
+            [noteId]: note,
+          },
+          noteOrder: [...currentWorkspace.noteOrder, noteId],
+        };
+      },
+      {
+        selectedNodeId: nodeId,
+        editingNodeId: nodeId,
+        activeMarkdownId: noteId,
+      },
+    );
+    setImportError(null);
+  }
+
+  function handleCreateSiblingNodeFromSelection() {
+    if (!selectedNode || !currentGraph) {
+      return;
+    }
+
+    const parentEdges = currentGraph.edges.filter(
+      (edge) => edge.target === selectedNode.id,
+    );
+    const nodeId = createNodeId();
+    const noteId = createNoteId();
+    const siblingPosition = {
+      x: selectedNode.position.x,
+      y: selectedNode.position.y + 120,
+    };
+    const childPosition = {
+      x: selectedNode.position.x + 240,
+      y: selectedNode.position.y + 120,
+    };
+
+    applyWorkspaceMutation(
+      (currentWorkspace) => {
+        const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+        if (!graph) {
+          return currentWorkspace;
+        }
+
+        const noteTitle = getUniqueMarkdownTitle(
+          currentWorkspace.notes,
+          currentWorkspace.noteOrder,
+          DEFAULT_NEW_MARKDOWN_TITLE,
+        );
+        const note = createDefaultNoteForNode(noteId, noteTitle);
+        let nextPosition = siblingPosition;
+        let nextEdge: KnowledgeEdge | null = null;
+
+        if (parentEdges.length === 0) {
+          nextPosition = childPosition;
+          nextEdge = {
+            id: createEdgeId(selectedNode.id, nodeId),
+            source: selectedNode.id,
+            target: nodeId,
+          };
+        } else if (parentEdges.length === 1) {
+          nextEdge = {
+            id: createEdgeId(parentEdges[0].source, nodeId),
+            source: parentEdges[0].source,
+            target: nodeId,
+          };
+        }
+
+        const node = createDefaultNodeAtPosition(nodeId, noteId, nextPosition);
+
+        return {
+          ...currentWorkspace,
+          graphs: {
+            ...currentWorkspace.graphs,
+            [graph.id]: {
+              ...graph,
+              nodes: [...graph.nodes, node],
+              edges: nextEdge ? [...graph.edges, nextEdge] : graph.edges,
+            },
+          },
+          notes: {
+            ...currentWorkspace.notes,
+            [noteId]: note,
+          },
+          noteOrder: [...currentWorkspace.noteOrder, noteId],
+        };
+      },
+      {
+        selectedNodeId: nodeId,
+        editingNodeId: nodeId,
+        activeMarkdownId: noteId,
+      },
+    );
+    setImportError(null);
   }
 
   function handleDeleteSelectedNode() {
@@ -367,28 +696,34 @@ function App() {
       return;
     }
 
-    const noteIdToDelete = selectedNode?.data.noteId ?? null;
-
     setImportError(null);
-    updateCurrentGraph(
-      (graph) => {
-        const nextNotes = { ...graph.notes };
+    applyWorkspaceMutation(
+      (currentWorkspace) => {
+        const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
 
-        if (noteIdToDelete) {
-          delete nextNotes[noteIdToDelete];
+        if (!graph) {
+          return currentWorkspace;
         }
 
         return {
-          ...graph,
-          nodes: graph.nodes.filter((node) => node.id !== selectedNodeId),
-          edges: graph.edges.filter(
-            (edge) =>
-              edge.source !== selectedNodeId && edge.target !== selectedNodeId,
-          ),
-          notes: nextNotes,
+          ...currentWorkspace,
+          graphs: {
+            ...currentWorkspace.graphs,
+            [graph.id]: {
+              ...graph,
+              nodes: graph.nodes.filter((node) => node.id !== selectedNodeId),
+              edges: graph.edges.filter(
+                (edge) =>
+                  edge.source !== selectedNodeId && edge.target !== selectedNodeId,
+              ),
+            },
+          },
         };
       },
-      null,
+      {
+        selectedNodeId: null,
+        editingNodeId: null,
+      },
     );
   }
 
@@ -397,23 +732,37 @@ function App() {
       return;
     }
 
-    updateCurrentGraph((graph) => ({
-      ...graph,
-      nodes: graph.nodes.map((node) =>
-        node.id === selectedNode.id
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                kind: 'jump',
-                jumpLink: {
-                  targetGraphId: null,
-                },
-              },
-            }
-          : node,
-      ),
-    }));
+    applyWorkspaceMutation((currentWorkspace) => {
+      const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+      if (!graph) {
+        return currentWorkspace;
+      }
+
+      return {
+        ...currentWorkspace,
+        graphs: {
+          ...currentWorkspace.graphs,
+          [graph.id]: {
+            ...graph,
+            nodes: graph.nodes.map((node) =>
+              node.id === selectedNode.id
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      kind: 'jump',
+                      jumpLink: {
+                        targetGraphId: null,
+                      },
+                    },
+                  }
+                : node,
+            ),
+          },
+        },
+      };
+    });
   }
 
   function handleUnsetSelectedJumpNode() {
@@ -421,21 +770,35 @@ function App() {
       return;
     }
 
-    updateCurrentGraph((graph) => ({
-      ...graph,
-      nodes: graph.nodes.map((node) =>
-        node.id === selectedNode.id
-          ? {
-              ...node,
-              data: {
-                title: node.data.title,
-                noteId: node.data.noteId,
-                kind: 'default',
-              },
-            }
-          : node,
-      ),
-    }));
+    applyWorkspaceMutation((currentWorkspace) => {
+      const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+      if (!graph) {
+        return currentWorkspace;
+      }
+
+      return {
+        ...currentWorkspace,
+        graphs: {
+          ...currentWorkspace.graphs,
+          [graph.id]: {
+            ...graph,
+            nodes: graph.nodes.map((node) =>
+              node.id === selectedNode.id
+                ? {
+                    ...node,
+                    data: {
+                      title: node.data.title,
+                      noteId: node.data.noteId,
+                      kind: 'default',
+                    },
+                  }
+                : node,
+            ),
+          },
+        },
+      };
+    });
   }
 
   function handleSetSelectedJumpTargetGraph(targetGraphId: GraphId | null) {
@@ -443,23 +806,37 @@ function App() {
       return;
     }
 
-    updateCurrentGraph((graph) => ({
-      ...graph,
-      nodes: graph.nodes.map((node) =>
-        node.id === selectedNode.id
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                kind: 'jump',
-                jumpLink: {
-                  targetGraphId,
-                },
-              },
-            }
-          : node,
-      ),
-    }));
+    applyWorkspaceMutation((currentWorkspace) => {
+      const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+      if (!graph) {
+        return currentWorkspace;
+      }
+
+      return {
+        ...currentWorkspace,
+        graphs: {
+          ...currentWorkspace.graphs,
+          [graph.id]: {
+            ...graph,
+            nodes: graph.nodes.map((node) =>
+              node.id === selectedNode.id
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      kind: 'jump',
+                      jumpLink: {
+                        targetGraphId,
+                      },
+                    },
+                  }
+                : node,
+            ),
+          },
+        },
+      };
+    });
   }
 
   function handleEnterLinkedGraph(targetGraphId: GraphId) {
@@ -468,6 +845,7 @@ function App() {
     }
 
     setSelectedNodeId(null);
+    setEditingNodeId(null);
     setWorkspace((currentWorkspace) => ({
       ...currentWorkspace,
       currentGraphId: targetGraphId,
@@ -504,7 +882,10 @@ function App() {
     }
 
     setImportError(null);
-    downloadJson(exportCurrentGraphData(currentGraph), `${currentGraph.id}.json`);
+    downloadJson(
+      exportCurrentGraphData(currentGraph, workspace.notes),
+      `${currentGraph.id}.json`,
+    );
   }
 
   function handleExportWorkspace() {
@@ -524,6 +905,8 @@ function App() {
       }
 
       setSelectedNodeId(null);
+      setEditingNodeId(null);
+      setActiveMarkdownId(null);
       setImportError(null);
 
       if (importedData.kind === 'workspace') {
@@ -532,44 +915,161 @@ function App() {
       }
 
       setWorkspace((currentWorkspace) => {
-        const nextGraph = assignImportedGraphId(
+        const nextBundle = assignImportedGraphBundle(
           currentWorkspace,
-          importedData.data,
+          importedData.data.graph,
+          importedData.data.notes,
         );
 
         return {
           ...currentWorkspace,
           graphs: {
             ...currentWorkspace.graphs,
-            [nextGraph.id]: nextGraph,
+            [nextBundle.graph.id]: nextBundle.graph,
           },
-          graphOrder: [...currentWorkspace.graphOrder, nextGraph.id],
-          currentGraphId: nextGraph.id,
+          notes: {
+            ...currentWorkspace.notes,
+            ...nextBundle.notes,
+          },
+          graphOrder: [...currentWorkspace.graphOrder, nextBundle.graph.id],
+          noteOrder: [...currentWorkspace.noteOrder, ...nextBundle.noteOrder],
+          currentGraphId: nextBundle.graph.id,
         };
       });
     },
     [setWorkspace],
   );
 
-  function handleRenameSelectedNode(title: string) {
-    if (!selectedNode) {
+  function handleSelectMarkdown(noteId: NoteId) {
+    setActiveMarkdownId(noteId);
+  }
+
+  function handleCreateMarkdown() {
+    const nextTitleInput = window.prompt(
+      '请输入新的 Markdown 名称',
+      DEFAULT_NEW_MARKDOWN_TITLE,
+    );
+
+    if (!nextTitleInput?.trim()) {
       return;
     }
 
-    updateCurrentGraph((graph) => ({
-      ...graph,
-      nodes: graph.nodes.map((node) =>
-        node.id === selectedNode.id
-          ? {
-              ...node,
-              data: {
-                ...node.data,
-                title,
-              },
-            }
-          : node,
-      ),
+    const noteId = createNoteId();
+
+    applyWorkspaceMutation(
+      (currentWorkspace) => {
+        const noteTitle = getUniqueMarkdownTitle(
+          currentWorkspace.notes,
+          currentWorkspace.noteOrder,
+          nextTitleInput,
+        );
+        const note = createDefaultNoteForNode(noteId, noteTitle);
+
+        return {
+          ...currentWorkspace,
+          notes: {
+            ...currentWorkspace.notes,
+            [noteId]: note,
+          },
+          noteOrder: [...currentWorkspace.noteOrder, noteId],
+        };
+      },
+      {
+        activeMarkdownId: noteId,
+      },
+    );
+  }
+
+  function handleRenameActiveMarkdown() {
+    if (!activeMarkdownId || !workspace.notes[activeMarkdownId]) {
+      return;
+    }
+
+    const nextTitleInput = window.prompt(
+      '请输入新的 Markdown 名称',
+      workspace.notes[activeMarkdownId].title,
+    );
+
+    if (!nextTitleInput?.trim()) {
+      return;
+    }
+
+    setWorkspace((currentWorkspace) => ({
+      ...currentWorkspace,
+      notes: {
+        ...currentWorkspace.notes,
+        [activeMarkdownId]: {
+          ...currentWorkspace.notes[activeMarkdownId],
+          title: getUniqueMarkdownTitle(
+            currentWorkspace.notes,
+            currentWorkspace.noteOrder,
+            nextTitleInput,
+            activeMarkdownId,
+          ),
+        },
+      },
     }));
+  }
+
+  function handleDeleteActiveMarkdown() {
+    if (!activeMarkdownId || !workspace.notes[activeMarkdownId]) {
+      return;
+    }
+
+    const note = workspace.notes[activeMarkdownId];
+    const usageRecords = noteUsageIndex[activeMarkdownId] ?? [];
+
+    if (
+      !window.confirm(
+        buildDeleteMarkdownMessage(
+          note.title,
+          usageRecords.map((record) => ({
+            graphTitle: record.graphTitle,
+            nodeTitle: record.nodeTitle,
+          })),
+        ),
+      )
+    ) {
+      return;
+    }
+
+    applyWorkspaceMutation(
+      (currentWorkspace) => {
+        const nextNotes = { ...currentWorkspace.notes };
+
+        delete nextNotes[activeMarkdownId];
+
+        return {
+          ...currentWorkspace,
+          notes: nextNotes,
+          noteOrder: currentWorkspace.noteOrder.filter(
+            (noteId) => noteId !== activeMarkdownId,
+          ),
+          graphs: Object.fromEntries(
+            Object.entries(currentWorkspace.graphs).map(([graphId, graph]) => [
+              graphId,
+              {
+                ...graph,
+                nodes: graph.nodes.map((node) =>
+                  node.data.noteId === activeMarkdownId
+                    ? {
+                        ...node,
+                        data: {
+                          ...node.data,
+                          noteId: null,
+                        },
+                      }
+                    : node,
+                ),
+              },
+            ]),
+          ) as WorkspaceState['graphs'],
+        };
+      },
+      {
+        activeMarkdownId: null,
+      },
+    );
   }
 
   if (!currentGraph) {
@@ -582,8 +1082,10 @@ function App() {
       canConvertSelectedNodeToJump={Boolean(
         selectedNode && selectedNode.data.kind !== 'jump',
       )}
+      canDeleteActiveMarkdown={Boolean(activeMarkdownId && workspace.notes[activeMarkdownId])}
       canDeleteCurrentGraph={workspace.graphOrder.length > 1}
       canDeleteSelectedNode={Boolean(selectedNode)}
+      canRenameActiveMarkdown={Boolean(activeMarkdownId && workspace.notes[activeMarkdownId])}
       canUnsetSelectedJumpNode={selectedNode?.data.kind === 'jump'}
       graphItems={graphItems}
       importError={importError}
@@ -594,27 +1096,26 @@ function App() {
         selectedNodeTitle: selectedNode?.data.title ?? null,
       }}
       isMobile={isMobile}
-      jumpTargetStatus={jumpTargetStatus}
+      markdownItems={markdownItems}
       mode={mode}
       onConvertSelectedNodeToJump={handleConvertSelectedNodeToJump}
       onCreateGraph={handleCreateGraph}
+      onCreateMarkdown={handleCreateMarkdown}
       onCreateNode={handleCreateNode}
+      onDeleteActiveMarkdown={handleDeleteActiveMarkdown}
       onDeleteCurrentGraph={handleDeleteCurrentGraph}
       onDeleteSelectedNode={handleDeleteSelectedNode}
       onExportCurrentGraph={handleExportCurrentGraph}
       onExportWorkspace={handleExportWorkspace}
       onImportData={handleImportData}
       onModeChange={setMode}
-      onRenameSelectedNode={handleRenameSelectedNode}
+      onRenameActiveMarkdown={handleRenameActiveMarkdown}
       onRenameCurrentGraph={handleRenameCurrentGraph}
       onSelectGraph={handleSelectGraph}
+      onSelectMarkdown={handleSelectMarkdown}
       onSetSelectedJumpTargetGraph={handleSetSelectedJumpTargetGraph}
       onThemeToggle={toggleTheme}
       onUnsetSelectedJumpNode={handleUnsetSelectedJumpNode}
-      selectedNodeTitle={selectedNode?.data.title ?? null}
-      selectedJumpNodeTitle={
-        selectedNode?.data.kind === 'jump' ? selectedNode.data.title : null
-      }
       selectedJumpTargetGraphId={selectedJumpTargetGraphId}
       theme={theme}
     />
@@ -622,7 +1123,9 @@ function App() {
 
   const canvasPane = (
     <CanvasPane
+      canCenterSelected={Boolean(selectedNode)}
       currentGraphId={currentGraph.id}
+      editingNodeId={editingNodeId}
       edges={currentGraph.edges}
       isMobile={isMobile}
       nodes={currentGraph.nodes.map((node) => {
@@ -630,6 +1133,7 @@ function App() {
 
         return {
           ...node,
+          type: node.data.kind === 'jump' ? 'jump' : 'mind',
           data: {
             ...node.data,
             targetGraphTitle: targetGraphId
@@ -646,14 +1150,19 @@ function App() {
           },
         };
       })}
-      canCenterSelected={Boolean(selectedNode)}
       onCenterSelected={handleCenterSelected}
+      onCommitNodeTitleEdit={handleCommitNodeTitleEdit}
       onConnectEdge={handleConnectEdge}
+      onCreateChildNodeFromSelection={handleCreateChildNodeFromSelection}
+      onCreateSiblingNodeFromSelection={handleCreateSiblingNodeFromSelection}
+      onDeleteSelectedNodeByShortcut={handleDeleteSelectedNode}
       onEdgesChange={handleEdgesChange}
       onEnterLinkedGraph={handleEnterLinkedGraph}
       onFitView={handleFitView}
       onNodesChange={handleNodesChange}
       onSelectNode={handleSelectNode}
+      onStartNodeTitleEdit={handleStartNodeTitleEdit}
+      onCancelNodeTitleEdit={handleCancelNodeTitleEdit}
       onViewportApiReady={setCanvasViewportApi}
       onZoomIn={handleZoomIn}
       onZoomOut={handleZoomOut}

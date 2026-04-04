@@ -116,7 +116,7 @@ button {
 .pane-content--toolbar {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .pane-content--canvas,
@@ -177,7 +177,7 @@ button {
 }
 
 .toolbar-section {
-  padding: var(--space-4);
+  padding: 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--panel-strong);
@@ -197,24 +197,51 @@ button {
   flex-shrink: 0;
 }
 
+.toolbar-list-shell {
+  position: relative;
+  min-height: 116px;
+  height: min(28vh, 240px);
+  overflow: auto;
+  resize: vertical;
+  padding-right: 4px;
+  padding-bottom: 6px;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.toolbar-list-shell::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 11px;
+  height: 11px;
+  border-right: 1.5px solid color-mix(in srgb, var(--line-strong) 82%, transparent);
+  border-bottom: 1.5px solid color-mix(in srgb, var(--line-strong) 82%, transparent);
+  pointer-events: none;
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+}
+
 .graph-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .graph-list__item {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 9px 10px 9px 14px;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 10px 8px 13px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--panel-strong) 92%, #ffffff);
   color: var(--text);
   text-align: left;
+  cursor: pointer;
   transition:
     border-color 140ms ease,
     background-color 140ms ease,
@@ -225,16 +252,18 @@ button {
   content: '';
   position: absolute;
   left: 0;
-  top: 7px;
-  bottom: 7px;
+  top: 6px;
+  bottom: 6px;
   width: 3px;
   border-radius: 999px;
   background: transparent;
 }
 
-.graph-list__item:hover {
+.graph-list__item:hover,
+.graph-list__item:focus-visible {
   border-color: color-mix(in srgb, var(--accent) 24%, var(--line));
   background: color-mix(in srgb, var(--panel-strong) 96%, #ffffff);
+  outline: none;
 }
 
 .graph-list__item[data-active='true'] {
@@ -247,6 +276,10 @@ button {
   background: color-mix(in srgb, var(--accent) 84%, var(--line));
 }
 
+.graph-list__item[data-linked='true'] {
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--line));
+}
+
 .graph-list__title {
   min-width: 0;
   overflow: hidden;
@@ -255,9 +288,17 @@ button {
   white-space: nowrap;
 }
 
+.graph-list__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .graph-list__meta {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   white-space: nowrap;
 }
 
@@ -306,9 +347,18 @@ button {
   gap: var(--space-2);
 }
 
+.toolbar-action-list--inline {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+}
+
+.toolbar-action-list--file {
+  flex: 1;
+}
+
 .toolbar-action-button {
   width: 100%;
-  padding: 12px 14px;
+  padding: 9px 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--panel-strong) 84%, #ffffff);
@@ -330,6 +380,94 @@ button {
   cursor: not-allowed;
 }
 
+.toolbar-action-list--inline .toolbar-action-button {
+  min-height: 36px;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.toolbar-action-list--file .toolbar-action-button {
+  min-height: 34px;
+  padding: 7px 9px;
+}
+
+.toolbar-jump-config {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.toolbar-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--panel-strong) 84%, #ffffff);
+  cursor: pointer;
+}
+
+.toolbar-switch__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toolbar-switch__track {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--line-strong) 64%, var(--panel-strong));
+  transition: background-color 140ms ease;
+}
+
+.toolbar-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+  transition: transform 140ms ease;
+}
+
+.toolbar-switch__input:checked + .toolbar-switch__track {
+  background: color-mix(in srgb, var(--accent) 42%, var(--panel-strong));
+}
+
+.toolbar-switch__input:checked + .toolbar-switch__track .toolbar-switch__thumb {
+  transform: translateX(14px);
+}
+
+.toolbar-switch__input:focus-visible + .toolbar-switch__track {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-soft) 55%, transparent);
+}
+
+.toolbar-switch__label {
+  font-size: 0.86rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.toolbar-switch:has(.toolbar-switch__input:disabled) {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.toolbar-switch--compact {
+  min-height: 34px;
+  padding: 6px 9px;
+  border-radius: 10px;
+}
+
 .toolbar-feedback {
   margin: 12px 0 0;
   color: #b13d3d;
@@ -342,9 +480,13 @@ button {
   gap: 8px;
 }
 
+.toolbar-select-field--inline {
+  min-width: 0;
+}
+
 .toolbar-select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--panel-strong) 86%, #ffffff);
@@ -393,7 +535,7 @@ button {
 
 .section-title {
   margin: 0 0 var(--space-2);
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .section-heading-row .section-title,
@@ -420,11 +562,11 @@ button {
 .canvas-placeholder__badge {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
+  padding: 4px 8px;
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 
@@ -436,6 +578,15 @@ button {
 
 .layout-mode-grid--compact {
   gap: 8px;
+}
+
+.layout-mode-grid--inline {
+  flex: 1;
+}
+
+.layout-mode-grid--inline .mode-button {
+  min-height: 32px;
+  padding: 6px 8px;
 }
 
 .theme-switch {
@@ -534,8 +685,8 @@ button {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 42px;
-  padding: 10px 8px;
+  min-height: 36px;
+  padding: 7px 6px;
   text-align: center;
   color: var(--text);
   border: 1px solid var(--line);
@@ -589,7 +740,7 @@ button {
 }
 
 .mode-button__label {
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -610,7 +761,7 @@ button {
 .info-card {
   display: grid;
   gap: 6px;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--panel-strong) 84%, #ffffff);
@@ -626,7 +777,7 @@ button {
 
 .info-card__label {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.76rem;
 }
 
 .canvas-surface {
@@ -638,6 +789,11 @@ button {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(241, 246, 241, 0.95)),
     var(--panel-strong);
+}
+
+.canvas-surface:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-soft) 58%, transparent);
 }
 
 .canvas-controls {
@@ -744,37 +900,65 @@ button {
     0 0 22px color-mix(in srgb, var(--accent-soft) 88%, transparent);
 }
 
-.jump-node {
+.mind-node {
   display: grid;
   gap: 8px;
+  min-width: 160px;
+}
+
+.mind-node--jump {
   min-width: 184px;
 }
 
-.jump-node__badge {
-  width: fit-content;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-soft) 90%, transparent);
-  color: var(--accent);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.mind-node__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.jump-node__title {
+.jump-node__target-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mind-node__title {
+  flex: 1;
   font-size: 0.96rem;
   font-weight: 700;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.mind-node__title-input {
+  flex: 1;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel-strong) 92%, #ffffff);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.mind-node__title-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-soft) 52%, transparent);
 }
 
 .jump-node__meta {
+  min-width: 0;
+  flex: 1;
   color: var(--text-muted);
   font-size: 0.8rem;
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .jump-node__enter {
-  justify-self: start;
+  flex: 0 0 auto;
   padding: 7px 12px;
   border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
   border-radius: 999px;
@@ -789,7 +973,7 @@ button {
   cursor: not-allowed;
 }
 
-.jump-node__handle {
+.mind-node__handle {
   width: 10px;
   height: 10px;
   border-width: 1px;
@@ -837,6 +1021,10 @@ button {
   background: rgba(18, 28, 30, 0.92);
 }
 
+:root[data-theme='night'] .mind-node__title-input {
+  background: rgba(18, 28, 30, 0.94);
+}
+
 :root[data-theme='night'] .canvas-controls {
   border-color: rgba(154, 197, 182, 0.14);
   background: rgba(17, 26, 28, 0.88);
@@ -871,6 +1059,10 @@ button {
 
 :root[data-theme='night'] .graph-list__item[data-active='true']::before {
   background: rgba(141, 208, 176, 0.92);
+}
+
+:root[data-theme='night'] .graph-list__item[data-linked='true'] {
+  border-color: rgba(141, 208, 176, 0.24);
 }
 
 :root[data-theme='night'] .icon-action-button {
@@ -1221,6 +1413,14 @@ button {
     gap: 4px;
   }
 
+  .toolbar-jump-config {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar-switch--compact {
+    justify-content: center;
+  }
+
   .graph-list__item {
     padding: 8px 9px 8px 12px;
   }
@@ -1301,7 +1501,7 @@ button {
     font-size: 0.88rem;
   }
 
-  .jump-node {
+  .mind-node--jump {
     min-width: 150px;
   }
 

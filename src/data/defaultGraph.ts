@@ -1,6 +1,7 @@
 import type {
   GraphDocument,
   GraphId,
+  NoteId,
   NoteRecord,
   WorkspaceState,
 } from '../types/graph';
@@ -52,11 +53,15 @@ export function createDefaultGraphDocument(): GraphDocument {
         target: 'node_markdown',
       },
     ],
-    notes: {
-      note_graph: {
-        id: 'note_graph',
-        title: 'Knowledge Graph',
-        content: `# Knowledge Graph
+  };
+}
+
+export function createDefaultNotes(): Record<NoteId, NoteRecord> {
+  return {
+    note_graph: {
+      id: 'note_graph',
+      title: 'Knowledge Graph',
+      content: `# Knowledge Graph
 
 知识图谱适合把概念之间的关系可视化。
 
@@ -69,11 +74,11 @@ export function createDefaultGraphDocument(): GraphDocument {
 > 右侧面板现在已经可以直接渲染 Markdown。
 
 \`selectedNodeId\` 会驱动左右联动。`,
-      },
-      note_flow: {
-        id: 'note_flow',
-        title: 'React Flow',
-        content: `# React Flow
+    },
+    note_flow: {
+      id: 'note_flow',
+      title: 'React Flow',
+      content: `# React Flow
 
 React Flow 已经承担了当前画布交互。
 
@@ -96,11 +101,11 @@ React Flow 已经承担了当前画布交互。
 $$
 f(x) = x^2 + 2x + 1
 $$`,
-      },
-      note_markdown: {
-        id: 'note_markdown',
-        title: 'Markdown Pane',
-        content: `# Markdown Pane
+    },
+    note_markdown: {
+      id: 'note_markdown',
+      title: 'Markdown Pane',
+      content: `# Markdown Pane
 
 这一栏现在负责只读渲染选中节点的 note 内容。
 
@@ -118,31 +123,40 @@ $$`,
 1. 保持查看模式稳定
 2. 再考虑编辑模式
 3. 最后接入持久化`,
-      },
     },
   };
 }
 
 export function createDefaultWorkspaceState(): WorkspaceState {
   const defaultGraph = createDefaultGraphDocument();
+  const notes = createDefaultNotes();
 
   return {
-    version: 2,
+    version: 3,
     graphs: {
       [defaultGraph.id]: defaultGraph,
     },
+    notes,
     graphOrder: [defaultGraph.id],
+    noteOrder: ['note_graph', 'note_flow', 'note_markdown'],
     currentGraphId: defaultGraph.id,
   };
 }
 
-export function createStartNote(noteId: string): NoteRecord {
+export function createMarkdownNote(
+  noteId: NoteId,
+  title: string,
+  content?: string,
+): NoteRecord {
   return {
     id: noteId,
-    title: 'Start',
-    content: `# Start
+    title,
+    content:
+      content ??
+      `# ${title}
 
-从这里开始搭建新的 graph。`,
+在这里写内容。
+`,
   };
 }
 
@@ -150,6 +164,7 @@ export function createNewGraphDocument(
   graphId: GraphId,
   title: string,
   rootNodeId: string,
+  rootNoteId: NoteId,
 ): GraphDocument {
   return {
     id: graphId,
@@ -160,14 +175,11 @@ export function createNewGraphDocument(
         position: { x: 220, y: 160 },
         data: {
           title: 'Start',
-          noteId: rootNodeId,
+          noteId: rootNoteId,
           kind: 'default',
         },
       },
     ],
     edges: [],
-    notes: {
-      [rootNodeId]: createStartNote(rootNodeId),
-    },
   };
 }

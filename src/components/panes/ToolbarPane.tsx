@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import type { LayoutMode } from '../../types/layout';
-import type { GraphId } from '../../types/graph';
+import type { GraphId, NoteId } from '../../types/graph';
 import type { ThemeMode } from '../../types/theme';
 
 type ToolbarInfo = {
@@ -17,6 +18,14 @@ type GraphListItem = {
   incomingReferenceCount: number;
 };
 
+type MarkdownListItem = {
+  id: NoteId;
+  title: string;
+  usageCount: number;
+  isActive: boolean;
+  isLinkedToSelectedNode: boolean;
+};
+
 type ToolbarPaneProps = {
   mode: LayoutMode;
   onModeChange: (mode: LayoutMode) => void;
@@ -24,7 +33,13 @@ type ToolbarPaneProps = {
   onThemeToggle: () => void;
   info: ToolbarInfo;
   graphItems: GraphListItem[];
+  markdownItems: MarkdownListItem[];
   canDeleteCurrentGraph: boolean;
+  canDeleteSelectedNode: boolean;
+  canConvertSelectedNodeToJump: boolean;
+  canUnsetSelectedJumpNode: boolean;
+  canRenameActiveMarkdown: boolean;
+  canDeleteActiveMarkdown: boolean;
   onSelectGraph: (graphId: GraphId) => void;
   onCreateGraph: () => void;
   onRenameCurrentGraph: () => void;
@@ -36,16 +51,13 @@ type ToolbarPaneProps = {
   onExportCurrentGraph: () => void;
   onExportWorkspace: () => void;
   onImportData: (file: File) => void;
-  canDeleteSelectedNode: boolean;
-  canConvertSelectedNodeToJump: boolean;
-  canUnsetSelectedJumpNode: boolean;
-  selectedNodeTitle: string | null;
-  onRenameSelectedNode: (title: string) => void;
+  onSelectMarkdown: (noteId: NoteId) => void;
+  onCreateMarkdown: () => void;
+  onRenameActiveMarkdown: () => void;
+  onDeleteActiveMarkdown: () => void;
   selectedJumpTargetGraphId: GraphId | null;
-  selectedJumpNodeTitle: string | null;
   availableJumpTargetGraphs: Array<{ id: GraphId; title: string }>;
   onSetSelectedJumpTargetGraph: (graphId: GraphId | null) => void;
-  jumpTargetStatus: string | null;
   importError: string | null;
   isMobile?: boolean;
 };
@@ -64,7 +76,13 @@ export function ToolbarPane({
   onThemeToggle,
   info,
   graphItems,
+  markdownItems,
   canDeleteCurrentGraph,
+  canDeleteSelectedNode,
+  canConvertSelectedNodeToJump,
+  canUnsetSelectedJumpNode,
+  canRenameActiveMarkdown,
+  canDeleteActiveMarkdown,
   onSelectGraph,
   onCreateGraph,
   onRenameCurrentGraph,
@@ -76,21 +94,30 @@ export function ToolbarPane({
   onExportCurrentGraph,
   onExportWorkspace,
   onImportData,
-  canDeleteSelectedNode,
-  canConvertSelectedNodeToJump,
-  canUnsetSelectedJumpNode,
-  selectedNodeTitle,
-  onRenameSelectedNode,
+  onSelectMarkdown,
+  onCreateMarkdown,
+  onRenameActiveMarkdown,
+  onDeleteActiveMarkdown,
   selectedJumpTargetGraphId,
-  selectedJumpNodeTitle,
   availableJumpTargetGraphs,
   onSetSelectedJumpTargetGraph,
-  jumpTargetStatus,
   importError,
   isMobile = false,
 }: ToolbarPaneProps) {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const [isInfoSectionExpanded, setIsInfoSectionExpanded] = useState(!isMobile);
+
+  function handleListItemKeyDown(
+    event: KeyboardEvent<HTMLElement>,
+    action: () => void,
+  ) {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    action();
+  }
 
   return (
     <div
@@ -100,10 +127,10 @@ export function ToolbarPane({
       <header className={`pane-header${isMobile ? ' pane-header--mobile' : ''}`}>
         <div className="toolbar-header-row">
           <div className="toolbar-header-copy">
-            <p className="pane-eyebrow">Phase 6</p>
+            <p className="pane-eyebrow">Phase 7</p>
             <h1 className="pane-title">MyMind Workspace</h1>
             <p className="pane-description">
-              当前 graph 的操作和 workspace 管理都集中在这里。
+              当前 graph 的节点编辑、markdown 关联和 workspace 管理都集中在这里。
             </p>
           </div>
           <div className="toolbar-header-actions">
@@ -127,44 +154,33 @@ export function ToolbarPane({
 
       <section className="toolbar-section">
         <div className="section-heading-row">
-          <h2 className="section-title">布局切换</h2>
-        </div>
-        <div
-          aria-label="Layout mode selector"
-          className="layout-mode-grid layout-mode-grid--compact"
-          role="group"
-        >
-          {layoutOptions.map((option) => (
-            <button
-              aria-pressed={option.mode === mode}
-              aria-label={`切换到 ${option.label} 布局`}
-              className="mode-button"
-              data-active={option.mode === mode}
-              key={option.mode}
-              onClick={() => onModeChange(option.mode)}
-              title={option.label}
-              type="button"
-            >
-              <span className="mode-button__label">{option.label}</span>
-            </button>
-          ))}
+          <h2 className="section-title">布局</h2>
+          <div
+            aria-label="Layout mode selector"
+            className="layout-mode-grid layout-mode-grid--compact layout-mode-grid--inline"
+            role="group"
+          >
+            {layoutOptions.map((option) => (
+              <button
+                aria-pressed={option.mode === mode}
+                aria-label={`切换到 ${option.label} 布局`}
+                className="mode-button"
+                data-active={option.mode === mode}
+                key={option.mode}
+                onClick={() => onModeChange(option.mode)}
+                title={option.label}
+                type="button"
+              >
+                <span className="mode-button__label">{option.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="toolbar-section">
         <h2 className="section-title">图谱操作</h2>
-        {selectedNodeTitle ? (
-          <label className="toolbar-text-field">
-            <span className="info-card__label">节点标题</span>
-            <input
-              className="toolbar-text-input"
-              onChange={(event) => onRenameSelectedNode(event.target.value)}
-              type="text"
-              value={selectedNodeTitle}
-            />
-          </label>
-        ) : null}
-        <div className="toolbar-action-list">
+        <div className="toolbar-action-list toolbar-action-list--inline">
           <button className="toolbar-action-button" onClick={onCreateNode} type="button">
             新建节点
           </button>
@@ -176,39 +192,44 @@ export function ToolbarPane({
           >
             删除选中节点
           </button>
-          <button
-            className="toolbar-action-button"
-            disabled={!canConvertSelectedNodeToJump}
-            onClick={onConvertSelectedNodeToJump}
-            type="button"
-          >
-            设为跳转节点
-          </button>
-          <button
-            className="toolbar-action-button"
-            disabled={!canUnsetSelectedJumpNode}
-            onClick={onUnsetSelectedJumpNode}
-            type="button"
-          >
-            取消跳转节点
-          </button>
         </div>
-      </section>
+        <div className="toolbar-jump-config">
+          <label className="toolbar-switch toolbar-switch--compact" htmlFor="jump-node-toggle-inline">
+            <input
+              aria-label="跳转节点"
+              checked={canUnsetSelectedJumpNode}
+              className="toolbar-switch__input"
+              disabled={!canConvertSelectedNodeToJump && !canUnsetSelectedJumpNode}
+              id="jump-node-toggle-inline"
+              onChange={() => {
+                if (canUnsetSelectedJumpNode) {
+                  onUnsetSelectedJumpNode();
+                  return;
+                }
 
-      {selectedJumpNodeTitle ? (
-        <section className="toolbar-section">
-          <h2 className="section-title">跳转配置</h2>
-          <p className="section-copy">当前节点：{selectedJumpNodeTitle}</p>
-          <label className="toolbar-select-field">
-            <span className="info-card__label">目标 Graph</span>
+                if (canConvertSelectedNodeToJump) {
+                  onConvertSelectedNodeToJump();
+                }
+              }}
+              role="switch"
+              type="checkbox"
+            />
+            <span aria-hidden="true" className="toolbar-switch__track">
+              <span className="toolbar-switch__thumb" />
+            </span>
+            <span className="toolbar-switch__label">跳转</span>
+          </label>
+          <label className="toolbar-select-field toolbar-select-field--inline">
             <select
+              aria-label="目标 Graph"
               className="toolbar-select"
+              disabled={!canUnsetSelectedJumpNode}
               onChange={(event) =>
                 onSetSelectedJumpTargetGraph(event.target.value || null)
               }
               value={selectedJumpTargetGraphId ?? ''}
             >
-              <option value="">无</option>
+              <option value="">选择目标 Graph</option>
               {availableJumpTargetGraphs.map((graphItem) => (
                 <option key={graphItem.id} value={graphItem.id}>
                   {graphItem.title}
@@ -216,53 +237,156 @@ export function ToolbarPane({
               ))}
             </select>
           </label>
-          <p className="section-copy">
-            {jumpTargetStatus ?? '未设置目标 graph'}
-          </p>
-        </section>
-      ) : null}
+        </div>
+      </section>
 
       <section className="toolbar-section">
-        <h2 className="section-title">数据操作</h2>
-        <div className="toolbar-action-list">
-          <button
-            className="toolbar-action-button"
-            onClick={onExportCurrentGraph}
-            type="button"
-          >
-            导出当前 Graph
-          </button>
-          <button
-            className="toolbar-action-button"
-            onClick={onExportWorkspace}
-            type="button"
-          >
-            导出整个 Workspace
-          </button>
-          <button
-            className="toolbar-action-button"
-            onClick={() => importInputRef.current?.click()}
-            type="button"
-          >
-            导入 JSON
-          </button>
-          <input
-            accept=".json,application/json"
-            className="visually-hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
+        <div className="section-heading-row">
+          <h2 className="section-title">文件</h2>
+          <div className="toolbar-action-list toolbar-action-list--inline toolbar-action-list--file">
+            <button
+              className="toolbar-action-button"
+              onClick={onExportCurrentGraph}
+              type="button"
+            >
+              导出当前 Graph
+            </button>
+            <button
+              className="toolbar-action-button"
+              onClick={onExportWorkspace}
+              type="button"
+            >
+              导出整个 Workspace
+            </button>
+            <button
+              className="toolbar-action-button"
+              onClick={() => importInputRef.current?.click()}
+              type="button"
+            >
+              导入 JSON
+            </button>
+            <input
+              accept=".json,application/json"
+              className="visually-hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
 
-              if (file) {
-                onImportData(file);
-              }
+                if (file) {
+                  onImportData(file);
+                }
 
-              event.currentTarget.value = '';
-            }}
-            ref={importInputRef}
-            type="file"
-          />
+                event.currentTarget.value = '';
+              }}
+              ref={importInputRef}
+              type="file"
+            />
+          </div>
         </div>
         {importError ? <p className="toolbar-feedback">{importError}</p> : null}
+      </section>
+
+      <section className="toolbar-section">
+        <div className="section-heading-row">
+          <div className="graph-management__heading">
+            <h2 className="section-title">Markdown 管理</h2>
+            <span className="section-badge">{markdownItems.length} 个 Markdown</span>
+          </div>
+          <div className="graph-management__header-actions">
+            <button
+              aria-label="新建 Markdown"
+              className="icon-action-button"
+              onClick={onCreateMarkdown}
+              title="新建 Markdown"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                className="icon-action-button__icon"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  d="M8 3.25v9.5M3.25 8h9.5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeWidth="1.5"
+                />
+              </svg>
+            </button>
+            <button
+              aria-label="重命名当前 Markdown"
+              className="icon-action-button"
+              disabled={!canRenameActiveMarkdown}
+              onClick={onRenameActiveMarkdown}
+              title="重命名当前 Markdown"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                className="icon-action-button__icon"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  d="M3.5 11.5 11.8 3.2a1.5 1.5 0 0 1 2.1 2.1L5.6 13.6 2.5 14l.4-3.1Z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinejoin="round"
+                  strokeWidth="1.35"
+                />
+              </svg>
+            </button>
+            <button
+              aria-label="删除当前 Markdown"
+              className="icon-action-button icon-action-button--danger"
+              disabled={!canDeleteActiveMarkdown}
+              onClick={onDeleteActiveMarkdown}
+              title="删除当前 Markdown"
+              type="button"
+            >
+              <svg
+                aria-hidden="true"
+                className="icon-action-button__icon"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  d="M4.5 5.25v7.25a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V5.25M3.5 4.25h9M6.25 4.25v-1a.75.75 0 0 1 .75-.75h2a.75.75 0 0 1 .75.75v1M6.5 7v4M9.5 7v4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.35"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="toolbar-list-shell" data-testid="markdown-list">
+          <ul aria-label="Markdown 列表" className="graph-list" role="listbox">
+            {markdownItems.map((markdownItem) => (
+              <li
+                aria-selected={markdownItem.isActive}
+                className="graph-list__item"
+                data-active={markdownItem.isActive}
+                data-linked={markdownItem.isLinkedToSelectedNode}
+                key={markdownItem.id}
+                onClick={() => onSelectMarkdown(markdownItem.id)}
+                onKeyDown={(event) =>
+                  handleListItemKeyDown(event, () => onSelectMarkdown(markdownItem.id))
+                }
+                role="option"
+                tabIndex={0}
+              >
+                <span className="graph-list__body">
+                  <span className="graph-list__title">{markdownItem.title}</span>
+                  <span className="graph-list__meta">
+                    {markdownItem.isLinkedToSelectedNode ? '已关联 · ' : ''}
+                    {markdownItem.usageCount} 个节点
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       <section className="toolbar-section">
@@ -339,21 +463,30 @@ export function ToolbarPane({
             </button>
           </div>
         </div>
-        <div className="graph-list" data-testid="graph-list">
-          {graphItems.map((graphItem) => (
-            <button
-              className="graph-list__item"
-              data-active={graphItem.isCurrent}
-              key={graphItem.id}
-              onClick={() => onSelectGraph(graphItem.id)}
-              type="button"
-            >
-              <span className="graph-list__title">{graphItem.title}</span>
-              <span className="graph-list__meta">
-                {graphItem.incomingReferenceCount} 个引用
-              </span>
-            </button>
-          ))}
+        <div className="toolbar-list-shell" data-testid="graph-list">
+          <ul aria-label="Graph 列表" className="graph-list" role="listbox">
+            {graphItems.map((graphItem) => (
+              <li
+                aria-selected={graphItem.isCurrent}
+                className="graph-list__item"
+                data-active={graphItem.isCurrent}
+                key={graphItem.id}
+                onClick={() => onSelectGraph(graphItem.id)}
+                onKeyDown={(event) =>
+                  handleListItemKeyDown(event, () => onSelectGraph(graphItem.id))
+                }
+                role="option"
+                tabIndex={0}
+              >
+                <span className="graph-list__body">
+                  <span className="graph-list__title">{graphItem.title}</span>
+                  <span className="graph-list__meta">
+                    {graphItem.incomingReferenceCount} 个引用
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 

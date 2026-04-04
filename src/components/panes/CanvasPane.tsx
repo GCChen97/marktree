@@ -6,14 +6,15 @@ import {
   applyNodeChanges,
   useReactFlow,
 } from '@xyflow/react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type {
   NodeTypes,
   OnConnect,
   OnEdgesChange,
   OnNodesChange,
 } from '@xyflow/react';
-import { JumpNode } from '../canvas/JumpNode';
+import { MindNode } from '../canvas/MindNode';
 import type {
   CanvasViewportApi,
   GraphId,
@@ -26,10 +27,17 @@ type CanvasPaneProps = {
   nodes: KnowledgeNode[];
   edges: KnowledgeEdge[];
   selectedNodeId: string | null;
+  editingNodeId: string | null;
   onNodesChange: (nodes: KnowledgeNode[]) => void;
   onEdgesChange: (edges: KnowledgeEdge[]) => void;
   onConnectEdge: (connection: Connection) => void;
   onSelectNode: (nodeId: string | null) => void;
+  onStartNodeTitleEdit: (nodeId: string) => void;
+  onCommitNodeTitleEdit: (nodeId: string, title: string) => void;
+  onCancelNodeTitleEdit: () => void;
+  onCreateSiblingNodeFromSelection: () => void;
+  onCreateChildNodeFromSelection: () => void;
+  onDeleteSelectedNodeByShortcut: () => void;
   onViewportApiReady: (api: CanvasViewportApi | null) => void;
   onEnterLinkedGraph: (targetGraphId: GraphId) => void;
   onFitView: () => void;
@@ -39,6 +47,13 @@ type CanvasPaneProps = {
   canCenterSelected: boolean;
   isMobile?: boolean;
 };
+
+function isTypingTarget(target: EventTarget | null) {
+  return (
+    target instanceof HTMLElement &&
+    Boolean(target.closest('input, textarea, select, [contenteditable="true"]'))
+  );
+}
 
 function CanvasViewportBridge({
   onViewportApiReady,
@@ -102,7 +117,8 @@ function CanvasViewportBridge({
 }
 
 const nodeTypes: NodeTypes = {
-  jump: JumpNode,
+  mind: MindNode,
+  jump: MindNode,
 };
 
 export function CanvasPane({
@@ -110,10 +126,17 @@ export function CanvasPane({
   nodes,
   edges,
   selectedNodeId,
+  editingNodeId,
   onNodesChange,
   onEdgesChange,
   onConnectEdge,
   onSelectNode,
+  onStartNodeTitleEdit,
+  onCommitNodeTitleEdit,
+  onCancelNodeTitleEdit,
+  onCreateSiblingNodeFromSelection,
+  onCreateChildNodeFromSelection,
+  onDeleteSelectedNodeByShortcut,
   onViewportApiReady,
   onEnterLinkedGraph,
   onFitView,
@@ -123,6 +146,8 @@ export function CanvasPane({
   canCenterSelected,
   isMobile = false,
 }: CanvasPaneProps) {
+  const surfaceRef = useRef<HTMLDivElement | null>(null);
+
   const displayNodes = useMemo(
     () =>
       nodes.map((node) => {
@@ -130,10 +155,14 @@ export function CanvasPane({
 
         return {
           ...node,
-          type: node.data.kind === 'jump' ? 'jump' : node.type,
+          type: node.data.kind === 'jump' ? 'jump' : 'mind',
           data: {
             ...node.data,
             label: node.data.title,
+            isEditingTitle: editingNodeId === node.id,
+            onStartTitleEdit: onStartNodeTitleEdit,
+            onCommitTitleEdit: onCommitNodeTitleEdit,
+            onCancelTitleEdit: onCancelNodeTitleEdit,
             onEnterLinkedGraph,
           },
           selected: node.id === selectedNodeId,
@@ -145,6 +174,10 @@ export function CanvasPane({
                 data: {
                   ...node.data,
                   label: node.data.title,
+                  isEditingTitle: editingNodeId === node.id,
+                  onStartTitleEdit: onStartNodeTitleEdit,
+                  onCommitTitleEdit: onCommitNodeTitleEdit,
+                  onCancelTitleEdit: onCancelNodeTitleEdit,
                   onEnterLinkedGraph,
                   targetGraphMissing: true,
                 },
@@ -152,7 +185,16 @@ export function CanvasPane({
             : {}),
         };
       }),
-    [currentGraphId, nodes, onEnterLinkedGraph, selectedNodeId],
+    [
+      currentGraphId,
+      editingNodeId,
+      nodes,
+      onCancelNodeTitleEdit,
+      onCommitNodeTitleEdit,
+      onEnterLinkedGraph,
+      onStartNodeTitleEdit,
+      selectedNodeId,
+    ],
   );
 
   const handleNodesChange: OnNodesChange<KnowledgeNode> = (changes) => {
@@ -167,6 +209,31 @@ export function CanvasPane({
     onConnectEdge(connection);
   };
 
+  function handleCanvasKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (editingNodeId || isTypingTarget(event.target)) {
+      return;
+    }
+
+    if (event.key === 'Delete') {
+      event.preventDefault();
+      onDeleteSelectedNodeByShortcut();
+      return;
+    }
+
+    if (event.key !== 'Enter') {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (event.shiftKey) {
+      onCreateChildNodeFromSelection();
+      return;
+    }
+
+    onCreateSiblingNodeFromSelection();
+  }
+
   return (
     <div
       className="pane-content pane-content--canvas"
@@ -175,14 +242,25 @@ export function CanvasPane({
       <header
         className={`pane-header pane-header--compact${isMobile ? ' pane-header--mobile' : ''}`}
       >
-        <p className="pane-eyebrow">Phase 6</p>
+        <p className="pane-eyebrow">Phase 7</p>
         <h2 className="pane-title">思维导图画布</h2>
         <p className="pane-description">
-          当前 graph 的节点、跳转节点与引用关系都在这里呈现，支持跨 graph 进入。
+          当前 graph 的节点、跳转节点与 markdown 关系都在这里呈现，支持快捷键和双击编辑。
         </p>
       </header>
 
-      <div className="canvas-surface" data-testid="graph-canvas-surface">
+      <div
+        className="canvas-surface"
+        data-testid="graph-canvas-surface"
+        onKeyDown={handleCanvasKeyDown}
+        onMouseDownCapture={(event) => {
+          if (!isTypingTarget(event.target)) {
+            surfaceRef.current?.focus();
+          }
+        }}
+        ref={surfaceRef}
+        tabIndex={0}
+      >
         <div className="canvas-controls" data-mobile={isMobile}>
           <button
             aria-label="Fit View"
@@ -267,9 +345,18 @@ export function CanvasPane({
           nodes={displayNodes}
           onConnect={handleConnect}
           onEdgesChange={handleEdgesChange}
-          onNodeClick={(_, node) => onSelectNode(node.id)}
+          onNodeClick={(_, node) => {
+            onSelectNode(node.id);
+            surfaceRef.current?.focus();
+          }}
+          onNodeDoubleClick={(_, node) => {
+            onStartNodeTitleEdit(node.id);
+          }}
           onNodesChange={handleNodesChange}
-          onPaneClick={() => onSelectNode(null)}
+          onPaneClick={() => {
+            onSelectNode(null);
+            surfaceRef.current?.focus();
+          }}
           proOptions={{ hideAttribution: true }}
         >
           <CanvasViewportBridge onViewportApiReady={onViewportApiReady} />

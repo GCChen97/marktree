@@ -1,6 +1,6 @@
 import {
-  DEFAULT_WORKSPACE_GRAPH_ID,
   createDefaultWorkspaceState,
+  createMarkdownNote,
 } from '../data/defaultGraph';
 import type {
   ExportedGraphData,
@@ -11,13 +11,12 @@ import type {
   GraphReferenceRecord,
   KnowledgeEdge,
   KnowledgeNode,
-  LegacyGraphData,
+  NoteId,
   NoteRecord,
   WorkspaceState,
 } from '../types/graph';
 
-export const LEGACY_GRAPH_EXPORT_VERSION = 1 as const;
-export const WORKSPACE_EXPORT_VERSION = 2 as const;
+export const WORKSPACE_EXPORT_VERSION = 3 as const;
 
 export const DEFAULT_NEW_NODE_POSITION = {
   x: 160,
@@ -26,14 +25,11 @@ export const DEFAULT_NEW_NODE_POSITION = {
 
 export const DEFAULT_NEW_NODE_TITLE = 'Untitled';
 export const DEFAULT_NEW_GRAPH_TITLE = 'Untitled Graph';
-
-export const DEFAULT_NEW_NOTE_CONTENT = `# Untitled
-
-在这里写内容。
-`;
+export const DEFAULT_NEW_MARKDOWN_TITLE = 'Untitled';
 
 let nodeCounter = 0;
 let graphCounter = 0;
+let noteCounter = 0;
 
 export function createNodeId() {
   nodeCounter += 1;
@@ -43,6 +39,11 @@ export function createNodeId() {
 export function createGraphId() {
   graphCounter += 1;
   return `graph_${Date.now()}_${graphCounter}`;
+}
+
+export function createNoteId() {
+  noteCounter += 1;
+  return `note_${Date.now()}_${noteCounter}`;
 }
 
 export function createEdgeId(
@@ -61,24 +62,86 @@ export function createEdgeId(
   ].join('_');
 }
 
-export function createDefaultNoteForNode(nodeId: string): NoteRecord {
-  return {
-    id: nodeId,
-    title: DEFAULT_NEW_NODE_TITLE,
-    content: DEFAULT_NEW_NOTE_CONTENT,
-  };
+export function normalizeMarkdownTitle(title: string) {
+  return title.trim().replace(/\s+/g, ' ');
+}
+
+function normalizeMarkdownTitleForCompare(title: string) {
+  return normalizeMarkdownTitle(title).toLocaleLowerCase();
+}
+
+export function getUniqueMarkdownTitle(
+  notes: Record<NoteId, NoteRecord>,
+  noteOrder: NoteId[],
+  desiredTitle: string,
+  excludedNoteId?: NoteId | null,
+): string {
+  const baseTitle = normalizeMarkdownTitle(desiredTitle) || DEFAULT_NEW_MARKDOWN_TITLE;
+  const existingNames = new Set(
+    noteOrder
+      .filter((noteId) => noteId !== excludedNoteId)
+      .map((noteId) => notes[noteId])
+      .filter(Boolean)
+      .map((note) => normalizeMarkdownTitleForCompare(note.title)),
+  );
+
+  if (!existingNames.has(normalizeMarkdownTitleForCompare(baseTitle))) {
+    return baseTitle;
+  }
+
+  let suffix = 2;
+
+  while (
+    existingNames.has(
+      normalizeMarkdownTitleForCompare(`${baseTitle} (${suffix})`),
+    )
+  ) {
+    suffix += 1;
+  }
+
+  return `${baseTitle} (${suffix})`;
+}
+
+export function findNoteIdByTitle(
+  workspace: WorkspaceState,
+  title: string,
+): NoteId | null {
+  const normalizedTitle = normalizeMarkdownTitleForCompare(title);
+
+  if (!normalizedTitle) {
+    return null;
+  }
+
+  for (const noteId of workspace.noteOrder) {
+    const note = workspace.notes[noteId];
+
+    if (
+      note &&
+      normalizeMarkdownTitleForCompare(note.title) === normalizedTitle
+    ) {
+      return noteId;
+    }
+  }
+
+  return null;
+}
+
+export function createDefaultNoteForNode(noteId: NoteId, title: string) {
+  return createMarkdownNote(noteId, title);
 }
 
 export function createDefaultNodeAtPosition(
   nodeId: string,
+  noteId: NoteId | null,
   position: { x: number; y: number },
 ): KnowledgeNode {
   return {
     id: nodeId,
     position,
+    type: 'mind',
     data: {
       title: DEFAULT_NEW_NODE_TITLE,
-      noteId: nodeId,
+      noteId,
       kind: 'default',
     },
   };
@@ -116,7 +179,7 @@ function isValidNode(node: unknown): node is KnowledgeNode {
     typeof position.y === 'number' &&
     isPlainObject(data) &&
     typeof data.title === 'string' &&
-    typeof data.noteId === 'string' &&
+    (typeof data.noteId === 'string' || data.noteId === null) &&
     (data.kind === undefined ||
       data.kind === 'default' ||
       data.kind === 'jump') &&
@@ -150,20 +213,20 @@ function isValidGraphDocument(graph: unknown): graph is GraphDocument {
     Array.isArray(graph.nodes) &&
     graph.nodes.every(isValidNode) &&
     Array.isArray(graph.edges) &&
-    graph.edges.every(isValidEdge) &&
-    isPlainObject(graph.notes) &&
-    Object.values(graph.notes).every(isValidNoteRecord)
+    graph.edges.every(isValidEdge)
   );
 }
 
 function sanitizeGraphDocument(graph: GraphDocument): GraphDocument {
   return {
-    ...graph,
+    id: graph.id,
+    title: graph.title,
     nodes: graph.nodes.map((node) => ({
       ...node,
+      type: node.data.kind === 'jump' ? 'jump' : 'mind',
       data: {
         title: node.data.title,
-        noteId: node.data.noteId,
+        noteId: node.data.noteId ?? null,
         kind: node.data.kind ?? 'default',
         jumpLink:
           node.data.kind === 'jump' || node.data.jumpLink
@@ -172,6 +235,9 @@ function sanitizeGraphDocument(graph: GraphDocument): GraphDocument {
               }
             : undefined,
       },
+    })),
+    edges: graph.edges.map((edge) => ({
+      ...edge,
     })),
   };
 }
@@ -185,12 +251,31 @@ function sanitizeWorkspaceState(workspace: WorkspaceState): WorkspaceState {
     })
     .filter(Boolean) as Array<[GraphId, GraphDocument]>;
 
+  const noteEntries = workspace.noteOrder
+    .map((noteId) => {
+      const note = workspace.notes[noteId];
+
+      return note
+        ? [
+            noteId,
+            {
+              id: note.id,
+              title: normalizeMarkdownTitle(note.title) || DEFAULT_NEW_MARKDOWN_TITLE,
+              content: note.content,
+            },
+          ]
+        : null;
+    })
+    .filter(Boolean) as Array<[NoteId, NoteRecord]>;
+
   if (graphEntries.length === 0) {
     return createDefaultWorkspaceState();
   }
 
   const graphs = Object.fromEntries(graphEntries) as Record<GraphId, GraphDocument>;
   const graphOrder = graphEntries.map(([graphId]) => graphId);
+  const notes = Object.fromEntries(noteEntries) as Record<NoteId, NoteRecord>;
+  const noteOrder = noteEntries.map(([noteId]) => noteId);
   const currentGraphId = graphs[workspace.currentGraphId]
     ? workspace.currentGraphId
     : graphOrder[0];
@@ -198,46 +283,12 @@ function sanitizeWorkspaceState(workspace: WorkspaceState): WorkspaceState {
   return {
     version: WORKSPACE_EXPORT_VERSION,
     graphs,
+    notes,
     graphOrder,
+    noteOrder,
     currentGraphId,
   };
 }
-
-export function wrapLegacyGraphAsWorkspace(legacyGraph: LegacyGraphData): WorkspaceState {
-  const wrappedGraph: GraphDocument = sanitizeGraphDocument({
-    id: DEFAULT_WORKSPACE_GRAPH_ID,
-    title: 'Main Graph',
-    nodes: legacyGraph.nodes,
-    edges: legacyGraph.edges,
-    notes: legacyGraph.notes,
-  });
-
-  return {
-    version: WORKSPACE_EXPORT_VERSION,
-    graphs: {
-      [wrappedGraph.id]: wrappedGraph,
-    },
-    graphOrder: [wrappedGraph.id],
-    currentGraphId: wrappedGraph.id,
-  };
-}
-
-export function exportCurrentGraphData(graph: GraphDocument): ExportedGraphData {
-  return {
-    version: WORKSPACE_EXPORT_VERSION,
-    graph: sanitizeGraphDocument(graph),
-  };
-}
-
-export function exportWorkspaceData(
-  workspace: WorkspaceState,
-): ExportedWorkspaceData {
-  return sanitizeWorkspaceState(workspace);
-}
-
-type ParsedImportResult =
-  | { kind: 'workspace'; data: WorkspaceState }
-  | { kind: 'graph'; data: GraphDocument };
 
 function parseJson(raw: string): unknown | null {
   try {
@@ -250,66 +301,46 @@ function parseJson(raw: string): unknown | null {
 export function parseStoredWorkspaceString(raw: string): WorkspaceState | null {
   const parsed = parseJson(raw);
 
-  if (!isPlainObject(parsed)) {
-    return null;
-  }
-
-  if (parsed.version === LEGACY_GRAPH_EXPORT_VERSION) {
-    const legacy = parseLegacyGraph(parsed);
-    return legacy ? wrapLegacyGraphAsWorkspace(legacy) : null;
-  }
-
-  if (parsed.version !== WORKSPACE_EXPORT_VERSION) {
+  if (!isPlainObject(parsed) || parsed.version !== WORKSPACE_EXPORT_VERSION) {
     return null;
   }
 
   if (
     !isPlainObject(parsed.graphs) ||
+    !isPlainObject(parsed.notes) ||
     !Array.isArray(parsed.graphOrder) ||
+    !Array.isArray(parsed.noteOrder) ||
     !parsed.graphOrder.every((graphId) => typeof graphId === 'string') ||
+    !parsed.noteOrder.every((noteId) => typeof noteId === 'string') ||
     typeof parsed.currentGraphId !== 'string'
   ) {
     return null;
   }
 
   const graphEntries = Object.entries(parsed.graphs);
+  const noteEntries = Object.entries(parsed.notes);
 
   if (!graphEntries.every(([, graph]) => isValidGraphDocument(graph))) {
+    return null;
+  }
+
+  if (!noteEntries.every(([, note]) => isValidNoteRecord(note))) {
     return null;
   }
 
   return sanitizeWorkspaceState({
     version: WORKSPACE_EXPORT_VERSION,
     graphs: parsed.graphs as Record<GraphId, GraphDocument>,
+    notes: parsed.notes as Record<NoteId, NoteRecord>,
     graphOrder: parsed.graphOrder as GraphId[],
+    noteOrder: parsed.noteOrder as NoteId[],
     currentGraphId: parsed.currentGraphId,
   });
 }
 
-function parseLegacyGraph(parsed: unknown): LegacyGraphData | null {
-  if (!isPlainObject(parsed)) {
-    return null;
-  }
-
-  if (
-    parsed.version !== LEGACY_GRAPH_EXPORT_VERSION ||
-    !Array.isArray(parsed.nodes) ||
-    !parsed.nodes.every(isValidNode) ||
-    !Array.isArray(parsed.edges) ||
-    !parsed.edges.every(isValidEdge) ||
-    !isPlainObject(parsed.notes) ||
-    !Object.values(parsed.notes).every(isValidNoteRecord)
-  ) {
-    return null;
-  }
-
-  return {
-    version: LEGACY_GRAPH_EXPORT_VERSION,
-    nodes: parsed.nodes,
-    edges: parsed.edges,
-    notes: parsed.notes as Record<string, NoteRecord>,
-  };
-}
+type ParsedImportResult =
+  | { kind: 'workspace'; data: WorkspaceState }
+  | { kind: 'graph'; data: { graph: GraphDocument; notes: Record<NoteId, NoteRecord> } };
 
 export function parseImportedData(raw: string): {
   data: ParsedImportResult | null;
@@ -336,31 +367,32 @@ export function parseImportedData(raw: string): {
     };
   }
 
-  if (isPlainObject(parsed) && parsed.version === WORKSPACE_EXPORT_VERSION) {
-    if ('graph' in parsed && isValidGraphDocument(parsed.graph)) {
-      return {
-        data: {
-          kind: 'graph',
-          data: sanitizeGraphDocument(parsed.graph),
-        },
-        error: null,
-      };
-    }
-  }
-
-  const legacyGraph = parseLegacyGraph(parsed);
-
-  if (legacyGraph) {
+  if (
+    isPlainObject(parsed) &&
+    parsed.version === WORKSPACE_EXPORT_VERSION &&
+    'graph' in parsed &&
+    isValidGraphDocument(parsed.graph) &&
+    'notes' in parsed &&
+    isPlainObject(parsed.notes) &&
+    Object.values(parsed.notes).every(isValidNoteRecord)
+  ) {
     return {
       data: {
         kind: 'graph',
-        data: sanitizeGraphDocument({
-          id: createGraphId(),
-          title: DEFAULT_NEW_GRAPH_TITLE,
-          nodes: legacyGraph.nodes,
-          edges: legacyGraph.edges,
-          notes: legacyGraph.notes,
-        }),
+        data: {
+          graph: sanitizeGraphDocument(parsed.graph),
+          notes: Object.fromEntries(
+            Object.entries(parsed.notes as Record<string, NoteRecord>).map(([noteId, note]) => [
+              noteId,
+              {
+                id: note.id,
+                title:
+                  normalizeMarkdownTitle(note.title) || DEFAULT_NEW_MARKDOWN_TITLE,
+                content: note.content,
+              },
+            ]),
+          ) as Record<NoteId, NoteRecord>,
+        },
       },
       error: null,
     };
@@ -370,6 +402,40 @@ export function parseImportedData(raw: string): {
     data: null,
     error: '导入失败：文件结构无效。',
   };
+}
+
+export function exportCurrentGraphData(
+  graph: GraphDocument,
+  notes: Record<NoteId, NoteRecord>,
+): ExportedGraphData {
+  const referencedNotes = Object.fromEntries(
+    collectReferencedNoteIds(graph)
+      .map((noteId) => notes[noteId])
+      .filter(Boolean)
+      .map((note) => [note.id, note]),
+  ) as Record<NoteId, NoteRecord>;
+
+  return {
+    version: WORKSPACE_EXPORT_VERSION,
+    graph: sanitizeGraphDocument(graph),
+    notes: referencedNotes,
+  };
+}
+
+export function exportWorkspaceData(
+  workspace: WorkspaceState,
+): ExportedWorkspaceData {
+  return sanitizeWorkspaceState(workspace);
+}
+
+export function collectReferencedNoteIds(graph: GraphDocument): NoteId[] {
+  return Array.from(
+    new Set(
+      graph.nodes
+        .map((node) => node.data.noteId)
+        .filter((noteId): noteId is NoteId => Boolean(noteId)),
+    ),
+  );
 }
 
 export function buildGraphReferenceIndex(
@@ -413,6 +479,46 @@ export function buildGraphReferenceIndex(
   return references;
 }
 
+export function buildNoteUsageIndex(workspace: WorkspaceState) {
+  const usage: Record<
+    NoteId,
+    Array<{
+      graphId: GraphId;
+      graphTitle: string;
+      nodeId: string;
+      nodeTitle: string;
+    }>
+  > = {};
+
+  for (const graphId of workspace.graphOrder) {
+    const graph = workspace.graphs[graphId];
+
+    if (!graph) {
+      continue;
+    }
+
+    for (const node of graph.nodes) {
+      const noteId = node.data.noteId;
+
+      if (!noteId || !workspace.notes[noteId]) {
+        continue;
+      }
+
+      usage[noteId] = [
+        ...(usage[noteId] ?? []),
+        {
+          graphId,
+          graphTitle: graph.title,
+          nodeId: node.id,
+          nodeTitle: node.data.title,
+        },
+      ];
+    }
+  }
+
+  return usage;
+}
+
 export function clearGraphReferences(
   workspace: WorkspaceState,
   targetGraphId: GraphId,
@@ -451,26 +557,53 @@ export function clearGraphReferences(
   };
 }
 
-export function assignImportedGraphId(
+export function assignImportedGraphBundle(
   workspace: WorkspaceState,
-  graph: GraphDocument,
-): GraphDocument {
-  if (!workspace.graphs[graph.id]) {
-    return sanitizeGraphDocument(graph);
+  importedGraph: GraphDocument,
+  importedNotes: Record<NoteId, NoteRecord>,
+) {
+  const nextGraphId = workspace.graphs[importedGraph.id]
+    ? createGraphId()
+    : importedGraph.id;
+  const nextNotes: Record<NoteId, NoteRecord> = {};
+  const nextNoteOrder: NoteId[] = [];
+  const noteIdMap = new Map<NoteId, NoteId | null>();
+
+  for (const [importedNoteId, importedNote] of Object.entries(importedNotes)) {
+    const nextNoteId = workspace.notes[importedNoteId] || nextNotes[importedNoteId]
+      ? createNoteId()
+      : importedNoteId;
+    const nextTitle = getUniqueMarkdownTitle(
+      {
+        ...workspace.notes,
+        ...nextNotes,
+      },
+      [...workspace.noteOrder, ...nextNoteOrder],
+      importedNote.title,
+    );
+
+    noteIdMap.set(importedNoteId, nextNoteId);
+    nextNotes[nextNoteId] = {
+      id: nextNoteId,
+      title: nextTitle,
+      content: importedNote.content,
+    };
+    nextNoteOrder.push(nextNoteId);
   }
 
-  const nextGraphId = createGraphId();
-
-  return sanitizeGraphDocument({
-    ...graph,
+  const graph = sanitizeGraphDocument({
+    ...importedGraph,
     id: nextGraphId,
-    nodes: graph.nodes.map((node) => ({
+    nodes: importedGraph.nodes.map((node) => ({
       ...node,
       data: {
         ...node.data,
+        noteId: node.data.noteId
+          ? noteIdMap.get(node.data.noteId) ?? null
+          : null,
         jumpLink:
           node.data.kind === 'jump' &&
-          node.data.jumpLink?.targetGraphId === graph.id
+          node.data.jumpLink?.targetGraphId === importedGraph.id
             ? {
                 targetGraphId: nextGraphId,
               }
@@ -478,4 +611,10 @@ export function assignImportedGraphId(
       },
     })),
   });
+
+  return {
+    graph,
+    notes: nextNotes,
+    noteOrder: nextNoteOrder,
+  };
 }

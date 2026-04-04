@@ -31,20 +31,25 @@ export function MarkdownPane({
         </p>
       </header>
 
-      <div className="markdown-shell" data-mobile={isMobile}>
-        <div className="markdown-shell__titlebar" data-mobile={isMobile}>
-          <strong>{selectedNode?.data.title ?? '未选择节点'}</strong>
-          <span>{selectedNode?.data.noteId ?? 'Phase 3 接入 Markdown'}</span>
-        </div>
-        <div className="markdown-shell__body">
+        <div className="markdown-shell" data-mobile={isMobile}>
+          <div className="markdown-shell__titlebar" data-mobile={isMobile}>
+            <strong>{selectedNode?.data.title ?? '未选择节点'}</strong>
+            <span>{selectedNode?.data.noteId ?? '未关联 Markdown'}</span>
+          </div>
+          <div className="markdown-shell__body">
           {!selectedNode ? (
             <div className="markdown-empty-state">
               <p>请选择一个节点。</p>
               <p>右侧会显示该节点对应的 Markdown 详情与公式内容。</p>
             </div>
+          ) : !selectedNode.data.noteId ? (
+            <div className="markdown-empty-state">
+              <p>当前节点还没有关联 markdown。</p>
+              <p>你可以在左侧工具栏里为它选择或创建一个 Markdown。</p>
+            </div>
           ) : !selectedNote ? (
             <div className="markdown-empty-state">
-              <p>找不到对应的 note 内容。</p>
+              <p>找不到对应的 markdown 内容。</p>
               <p>当前节点已选中，但关联的 `noteId` 没有映射到实际数据。</p>
             </div>
           ) : (

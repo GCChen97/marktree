@@ -106,15 +106,22 @@ describe('CanvasPane viewport bridge', () => {
       <CanvasPane
         canCenterSelected
         currentGraphId="graph_focus"
+        editingNodeId={null}
         edges={[]}
         nodes={[node]}
         onCenterSelected={() => {}}
+        onCancelNodeTitleEdit={() => {}}
+        onCommitNodeTitleEdit={() => {}}
         onConnectEdge={viewportMocks.connect}
+        onCreateChildNodeFromSelection={() => {}}
+        onCreateSiblingNodeFromSelection={() => {}}
+        onDeleteSelectedNodeByShortcut={() => {}}
         onEdgesChange={() => {}}
         onEnterLinkedGraph={() => {}}
         onFitView={() => {}}
         onNodesChange={() => {}}
         onSelectNode={() => {}}
+        onStartNodeTitleEdit={() => {}}
         onViewportApiReady={(api) => {
           viewportApi = api;
         }}
@@ -194,15 +201,22 @@ describe('CanvasPane viewport bridge', () => {
       <CanvasPane
         canCenterSelected={false}
         currentGraphId="graph_focus"
+        editingNodeId={null}
         edges={[]}
         nodes={[node]}
         onCenterSelected={centerSelected}
+        onCancelNodeTitleEdit={() => {}}
+        onCommitNodeTitleEdit={() => {}}
         onConnectEdge={viewportMocks.connect}
+        onCreateChildNodeFromSelection={() => {}}
+        onCreateSiblingNodeFromSelection={() => {}}
+        onDeleteSelectedNodeByShortcut={() => {}}
         onEdgesChange={() => {}}
         onEnterLinkedGraph={() => {}}
         onFitView={fitView}
         onNodesChange={() => {}}
         onSelectNode={() => {}}
+        onStartNodeTitleEdit={() => {}}
         onViewportApiReady={() => {}}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
@@ -224,5 +238,58 @@ describe('CanvasPane viewport bridge', () => {
     expect(zoomIn).toHaveBeenCalled();
     expect(zoomOut).toHaveBeenCalled();
     expect(centerSelected).not.toHaveBeenCalled();
+  });
+
+  it('routes enter, shift+enter, and delete shortcuts from the canvas surface', () => {
+    const node: KnowledgeNode = {
+      id: 'node_focus',
+      position: { x: 120, y: 80 },
+      data: {
+        title: 'Focus Node',
+        noteId: 'note_focus',
+        kind: 'default',
+      },
+    };
+    const createSibling = vi.fn();
+    const createChild = vi.fn();
+    const deleteSelected = vi.fn();
+
+    render(
+      <CanvasPane
+        canCenterSelected={false}
+        currentGraphId="graph_focus"
+        editingNodeId={null}
+        edges={[]}
+        nodes={[node]}
+        onCenterSelected={() => {}}
+        onCancelNodeTitleEdit={() => {}}
+        onCommitNodeTitleEdit={() => {}}
+        onConnectEdge={viewportMocks.connect}
+        onCreateChildNodeFromSelection={createChild}
+        onCreateSiblingNodeFromSelection={createSibling}
+        onDeleteSelectedNodeByShortcut={deleteSelected}
+        onEdgesChange={() => {}}
+        onEnterLinkedGraph={() => {}}
+        onFitView={() => {}}
+        onNodesChange={() => {}}
+        onSelectNode={() => {}}
+        onStartNodeTitleEdit={() => {}}
+        onViewportApiReady={() => {}}
+        onZoomIn={() => {}}
+        onZoomOut={() => {}}
+        selectedNodeId="node_focus"
+      />,
+    );
+
+    const canvasSurface = screen.getByTestId('graph-canvas-surface');
+    canvasSurface.focus();
+
+    fireEvent.keyDown(canvasSurface, { key: 'Enter' });
+    fireEvent.keyDown(canvasSurface, { key: 'Enter', shiftKey: true });
+    fireEvent.keyDown(canvasSurface, { key: 'Delete' });
+
+    expect(createSibling).toHaveBeenCalledTimes(1);
+    expect(createChild).toHaveBeenCalledTimes(1);
+    expect(deleteSelected).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "currentGraphId": "graph_main",
+  "graphOrder": [
+    "graph_main",
+    "graph_1775274598199_1"
+  ],
+  "noteOrder": [
+    "note_graph",
+    "note_flow",
+    "note_markdown",
+    "note_1775274598199_1",
+    "note_1775274805860_2"
+  ],
+  "graphs": {
+    "graph_main": {
+      "title": "Main Graph",
+      "file": "Main Graph--main.json"
+    },
+    "graph_1775274598199_1": {
+      "title": "Untitled Graph",
+      "file": "Untitled Graph--74598199-1.json"
+    }
+  },
+  "notes": {
+    "note_graph": {
+      "title": "Knowledge Graph",
+      "file": "Knowledge Graph--graph.md"
+    },
+    "note_flow": {
+      "title": "React Flow",
+      "file": "React Flow--flow.md"
+    },
+    "note_markdown": {
+      "title": "Markdown Pane",
+      "file": "Markdown Pane--markdown.md"
+    },
+    "note_1775274598199_1": {
+      "title": "Start",
+      "file": "Start--74598199-1.md"
+    },
+    "note_1775274805860_2": {
+      "title": "Untitled",
+      "file": "Untitled--74805860-2.md"
+    }
+  }
+}

@@ -5,7 +5,10 @@ import { ThreePaneLayout } from './components/layout/ThreePaneLayout';
 import { CanvasPane } from './components/panes/CanvasPane';
 import { MarkdownPane } from './components/panes/MarkdownPane';
 import { ToolbarPane } from './components/panes/ToolbarPane';
-import { createNewGraphDocument } from './data/defaultGraph';
+import {
+  createDefaultWorkspaceState,
+  createNewGraphDocument,
+} from './data/defaultGraph';
 import { usePersistentLayoutState } from './hooks/usePersistentLayoutState';
 import { usePersistentWorkspaceState } from './hooks/usePersistentWorkspaceState';
 import { useResponsiveMode } from './hooks/useResponsiveMode';
@@ -107,7 +110,17 @@ function buildDeleteMarkdownMessage(
 
 function App() {
   const { mode, sizes, setMode, setSizes } = usePersistentLayoutState();
-  const { workspace, setWorkspace } = usePersistentWorkspaceState();
+  const {
+    workspace,
+    setWorkspace,
+    isLoading,
+    loadError,
+    dataMode,
+    isReadOnly,
+    localDataDirectoryState,
+    selectDataDirectory,
+    saveWorkspaceNow,
+  } = usePersistentWorkspaceState();
   const { viewportMode, isMobile } = useResponsiveMode();
   const { theme, toggleTheme } = useThemePreference();
   const [canvasViewportApi, setCanvasViewportApi] =
@@ -118,19 +131,23 @@ function App() {
   const [importError, setImportError] = useState<string | null>(null);
   const [mobileActiveTab, setMobileActiveTab] =
     useState<MobilePaneTab>('canvas');
-
-  const currentGraph =
-    workspace.graphs[workspace.currentGraphId] ??
-    workspace.graphs[workspace.graphOrder[0]];
-
-  const referenceIndex = useMemo(
-    () => buildGraphReferenceIndex(workspace),
+  const workspaceState = useMemo(
+    () => workspace ?? createDefaultWorkspaceState(),
     [workspace],
   );
 
+  const currentGraph =
+    workspaceState.graphs[workspaceState.currentGraphId] ??
+    workspaceState.graphs[workspaceState.graphOrder[0]];
+
+  const referenceIndex = useMemo(
+    () => buildGraphReferenceIndex(workspaceState),
+    [workspaceState],
+  );
+
   const noteUsageIndex = useMemo(
-    () => buildNoteUsageIndex(workspace),
-    [workspace],
+    () => buildNoteUsageIndex(workspaceState),
+    [workspaceState],
   );
 
   const selectedNode = useMemo(
@@ -145,25 +162,30 @@ function App() {
       return null;
     }
 
-    return workspace.notes[noteId] ?? null;
-  }, [selectedNode, workspace.notes]);
+    return workspaceState.notes[noteId] ?? null;
+  }, [selectedNode, workspaceState.notes]);
 
   const graphItems = useMemo(
     () =>
-      workspace.graphOrder.map((graphId) => ({
+      workspaceState.graphOrder.map((graphId) => ({
         id: graphId,
-        title: workspace.graphs[graphId]?.title ?? graphId,
-        isCurrent: graphId === workspace.currentGraphId,
+        title: workspaceState.graphs[graphId]?.title ?? graphId,
+        isCurrent: graphId === workspaceState.currentGraphId,
         incomingReferenceCount: referenceIndex[graphId]?.length ?? 0,
       })),
-    [referenceIndex, workspace.currentGraphId, workspace.graphOrder, workspace.graphs],
+    [
+      referenceIndex,
+      workspaceState.currentGraphId,
+      workspaceState.graphOrder,
+      workspaceState.graphs,
+    ],
   );
 
   const markdownItems = useMemo(
     () =>
-      workspace.noteOrder.map((noteId) => ({
+      workspaceState.noteOrder.map((noteId) => ({
         id: noteId,
-        title: workspace.notes[noteId]?.title ?? noteId,
+        title: workspaceState.notes[noteId]?.title ?? noteId,
         usageCount: noteUsageIndex[noteId]?.length ?? 0,
         isActive: noteId === activeMarkdownId,
         isLinkedToSelectedNode: noteId === (selectedNode?.data.noteId ?? null),
@@ -172,20 +194,24 @@ function App() {
       activeMarkdownId,
       noteUsageIndex,
       selectedNode,
-      workspace.noteOrder,
-      workspace.notes,
+      workspaceState.noteOrder,
+      workspaceState.notes,
     ],
   );
 
   const availableJumpTargetGraphs = useMemo(
     () =>
-      workspace.graphOrder
-        .filter((graphId) => graphId !== workspace.currentGraphId)
+      workspaceState.graphOrder
+        .filter((graphId) => graphId !== workspaceState.currentGraphId)
         .map((graphId) => ({
           id: graphId,
-          title: workspace.graphs[graphId]?.title ?? graphId,
+          title: workspaceState.graphs[graphId]?.title ?? graphId,
         })),
-    [workspace.currentGraphId, workspace.graphOrder, workspace.graphs],
+    [
+      workspaceState.currentGraphId,
+      workspaceState.graphOrder,
+      workspaceState.graphs,
+    ],
   );
 
   const selectedJumpTargetGraphId =
@@ -202,6 +228,10 @@ function App() {
         activeMarkdownId?: NoteId | null;
       },
     ) => {
+      if (isReadOnly) {
+        return;
+      }
+
       setWorkspace((currentWorkspace) => updater(currentWorkspace));
 
       if (nextUiState && 'selectedNodeId' in nextUiState) {
@@ -216,7 +246,7 @@ function App() {
         setActiveMarkdownId(nextUiState.activeMarkdownId ?? null);
       }
     },
-    [setWorkspace],
+    [isReadOnly, setWorkspace],
   );
 
   useEffect(() => {
@@ -242,10 +272,49 @@ function App() {
   }, [selectedNode]);
 
   useEffect(() => {
-    if (activeMarkdownId && !workspace.notes[activeMarkdownId]) {
+    if (activeMarkdownId && !workspaceState.notes[activeMarkdownId]) {
       setActiveMarkdownId(null);
     }
-  }, [activeMarkdownId, workspace.notes]);
+  }, [activeMarkdownId, workspaceState.notes]);
+
+  if (isLoading) {
+    return (
+      <div className="app-shell" data-theme={theme} data-viewport-mode={viewportMode}>
+        <div className="pane-content">
+          <p className="pane-eyebrow">Loading</p>
+          <h1 className="pane-title">正在加载仓库数据</h1>
+          <p className="pane-description">稍等一下，正在读取 `public/data` 下的 graph 和 markdown 文件。</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="app-shell" data-theme={theme} data-viewport-mode={viewportMode}>
+        <div className="pane-content">
+          <p className="pane-eyebrow">Repo Data</p>
+          <h1 className="pane-title">无法加载仓库数据</h1>
+          <p className="pane-description">{loadError}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!workspace) {
+    return (
+      <div className="app-shell" data-theme={theme} data-viewport-mode={viewportMode}>
+        <div className="pane-content">
+          <p className="pane-eyebrow">Repo Data</p>
+          <h1 className="pane-title">仓库数据为空</h1>
+          <p className="pane-description">
+            没有成功解析出可用的 workspace。请检查 `public/data/manifest.json`
+            和对应的 graph / note 文件是否存在且结构正确。
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   function updateCurrentGraphNodes(nodes: KnowledgeNode[]) {
     applyWorkspaceMutation((currentWorkspace) => {
@@ -444,7 +513,7 @@ function App() {
   }
 
   function handleRenameCurrentGraph() {
-    if (!currentGraph) {
+    if (!currentGraph || isReadOnly) {
       return;
     }
 
@@ -470,7 +539,7 @@ function App() {
   }
 
   function handleDeleteCurrentGraph() {
-    if (!currentGraph || workspace.graphOrder.length <= 1) {
+    if (!currentGraph || workspaceState.graphOrder.length <= 1 || isReadOnly) {
       return;
     }
 
@@ -840,7 +909,7 @@ function App() {
   }
 
   function handleEnterLinkedGraph(targetGraphId: GraphId) {
-    if (!workspace.graphs[targetGraphId]) {
+    if (!workspaceState.graphs[targetGraphId]) {
       return;
     }
 
@@ -883,68 +952,73 @@ function App() {
 
     setImportError(null);
     downloadJson(
-      exportCurrentGraphData(currentGraph, workspace.notes),
+      exportCurrentGraphData(currentGraph, workspaceState.notes),
       `${currentGraph.id}.json`,
     );
   }
 
   function handleExportWorkspace() {
     setImportError(null);
-    downloadJson(exportWorkspaceData(workspace), 'mymind-workspace.json');
+    downloadJson(exportWorkspaceData(workspaceState), 'mymind-workspace.json');
   }
 
-  const handleImportData = useCallback(
-    async (file: File) => {
-      const raw = await file.text();
-      const parsed = parseImportedData(raw);
-      const importedData = parsed.data;
+  async function handleImportData(file: File) {
+    if (isReadOnly) {
+      return;
+    }
 
-      if (!importedData) {
-        setImportError(parsed.error);
-        return;
-      }
+    const raw = await file.text();
+    const parsed = parseImportedData(raw);
+    const importedData = parsed.data;
 
-      setSelectedNodeId(null);
-      setEditingNodeId(null);
-      setActiveMarkdownId(null);
-      setImportError(null);
+    if (!importedData) {
+      setImportError(parsed.error);
+      return;
+    }
 
-      if (importedData.kind === 'workspace') {
-        setWorkspace(importedData.data);
-        return;
-      }
+    setSelectedNodeId(null);
+    setEditingNodeId(null);
+    setActiveMarkdownId(null);
+    setImportError(null);
 
-      setWorkspace((currentWorkspace) => {
-        const nextBundle = assignImportedGraphBundle(
-          currentWorkspace,
-          importedData.data.graph,
-          importedData.data.notes,
-        );
+    if (importedData.kind === 'workspace') {
+      setWorkspace(importedData.data);
+      return;
+    }
 
-        return {
-          ...currentWorkspace,
-          graphs: {
-            ...currentWorkspace.graphs,
-            [nextBundle.graph.id]: nextBundle.graph,
-          },
-          notes: {
-            ...currentWorkspace.notes,
-            ...nextBundle.notes,
-          },
-          graphOrder: [...currentWorkspace.graphOrder, nextBundle.graph.id],
-          noteOrder: [...currentWorkspace.noteOrder, ...nextBundle.noteOrder],
-          currentGraphId: nextBundle.graph.id,
-        };
-      });
-    },
-    [setWorkspace],
-  );
+    setWorkspace((currentWorkspace) => {
+      const nextBundle = assignImportedGraphBundle(
+        currentWorkspace,
+        importedData.data.graph,
+        importedData.data.notes,
+      );
+
+      return {
+        ...currentWorkspace,
+        graphs: {
+          ...currentWorkspace.graphs,
+          [nextBundle.graph.id]: nextBundle.graph,
+        },
+        notes: {
+          ...currentWorkspace.notes,
+          ...nextBundle.notes,
+        },
+        graphOrder: [...currentWorkspace.graphOrder, nextBundle.graph.id],
+        noteOrder: [...currentWorkspace.noteOrder, ...nextBundle.noteOrder],
+        currentGraphId: nextBundle.graph.id,
+      };
+    });
+  }
 
   function handleSelectMarkdown(noteId: NoteId) {
     setActiveMarkdownId(noteId);
   }
 
   function handleCreateMarkdown() {
+    if (isReadOnly) {
+      return;
+    }
+
     const nextTitleInput = window.prompt(
       '请输入新的 Markdown 名称',
       DEFAULT_NEW_MARKDOWN_TITLE,
@@ -981,13 +1055,13 @@ function App() {
   }
 
   function handleRenameActiveMarkdown() {
-    if (!activeMarkdownId || !workspace.notes[activeMarkdownId]) {
+    if (!activeMarkdownId || !workspaceState.notes[activeMarkdownId] || isReadOnly) {
       return;
     }
 
     const nextTitleInput = window.prompt(
       '请输入新的 Markdown 名称',
-      workspace.notes[activeMarkdownId].title,
+      workspaceState.notes[activeMarkdownId].title,
     );
 
     if (!nextTitleInput?.trim()) {
@@ -1012,11 +1086,11 @@ function App() {
   }
 
   function handleDeleteActiveMarkdown() {
-    if (!activeMarkdownId || !workspace.notes[activeMarkdownId]) {
+    if (!activeMarkdownId || !workspaceState.notes[activeMarkdownId] || isReadOnly) {
       return;
     }
 
-    const note = workspace.notes[activeMarkdownId];
+    const note = workspaceState.notes[activeMarkdownId];
     const usageRecords = noteUsageIndex[activeMarkdownId] ?? [];
 
     if (
@@ -1079,14 +1153,24 @@ function App() {
   const toolbarPane = (
     <ToolbarPane
       availableJumpTargetGraphs={availableJumpTargetGraphs}
+      canSaveDataFiles={Boolean(
+        dataMode === 'author-local' && localDataDirectoryState.hasWritableDirectory,
+      )}
       canConvertSelectedNodeToJump={Boolean(
         selectedNode && selectedNode.data.kind !== 'jump',
       )}
-      canDeleteActiveMarkdown={Boolean(activeMarkdownId && workspace.notes[activeMarkdownId])}
-      canDeleteCurrentGraph={workspace.graphOrder.length > 1}
+      canDeleteActiveMarkdown={Boolean(
+        activeMarkdownId && workspaceState.notes[activeMarkdownId],
+      )}
+      canDeleteCurrentGraph={workspaceState.graphOrder.length > 1}
       canDeleteSelectedNode={Boolean(selectedNode)}
-      canRenameActiveMarkdown={Boolean(activeMarkdownId && workspace.notes[activeMarkdownId])}
+      canRenameActiveMarkdown={Boolean(
+        activeMarkdownId && workspaceState.notes[activeMarkdownId],
+      )}
       canUnsetSelectedJumpNode={selectedNode?.data.kind === 'jump'}
+      dataMode={dataMode}
+      directoryError={localDataDirectoryState.lastError}
+      directoryName={localDataDirectoryState.directoryName}
       graphItems={graphItems}
       importError={importError}
       info={{
@@ -1095,6 +1179,7 @@ function App() {
         edgeCount: currentGraph.edges.length,
         selectedNodeTitle: selectedNode?.data.title ?? null,
       }}
+      isReadOnly={isReadOnly}
       isMobile={isMobile}
       markdownItems={markdownItems}
       mode={mode}
@@ -1111,7 +1196,13 @@ function App() {
       onModeChange={setMode}
       onRenameActiveMarkdown={handleRenameActiveMarkdown}
       onRenameCurrentGraph={handleRenameCurrentGraph}
+      onSaveDataFiles={() => {
+        void saveWorkspaceNow();
+      }}
       onSelectGraph={handleSelectGraph}
+      onSelectDataDirectory={() => {
+        void selectDataDirectory();
+      }}
       onSelectMarkdown={handleSelectMarkdown}
       onSetSelectedJumpTargetGraph={handleSetSelectedJumpTargetGraph}
       onThemeToggle={toggleTheme}
@@ -1127,6 +1218,7 @@ function App() {
       currentGraphId={currentGraph.id}
       editingNodeId={editingNodeId}
       edges={currentGraph.edges}
+      isReadOnly={isReadOnly}
       isMobile={isMobile}
       nodes={currentGraph.nodes.map((node) => {
         const targetGraphId = node.data.jumpLink?.targetGraphId ?? null;
@@ -1137,15 +1229,15 @@ function App() {
           data: {
             ...node.data,
             targetGraphTitle: targetGraphId
-              ? workspace.graphs[targetGraphId]?.title ?? null
+              ? workspaceState.graphs[targetGraphId]?.title ?? null
               : null,
             targetGraphMissing: Boolean(
-              targetGraphId && !workspace.graphs[targetGraphId],
+              targetGraphId && !workspaceState.graphs[targetGraphId],
             ),
             canEnterLinkedGraph: Boolean(
               node.data.kind === 'jump' &&
                 targetGraphId &&
-                workspace.graphs[targetGraphId],
+                workspaceState.graphs[targetGraphId],
             ),
           },
         };

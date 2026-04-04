@@ -26,6 +26,7 @@ type CanvasPaneProps = {
   currentGraphId: GraphId;
   nodes: KnowledgeNode[];
   edges: KnowledgeEdge[];
+  isReadOnly: boolean;
   selectedNodeId: string | null;
   editingNodeId: string | null;
   onNodesChange: (nodes: KnowledgeNode[]) => void;
@@ -125,6 +126,7 @@ export function CanvasPane({
   currentGraphId,
   nodes,
   edges,
+  isReadOnly,
   selectedNodeId,
   editingNodeId,
   onNodesChange,
@@ -160,13 +162,13 @@ export function CanvasPane({
             ...node.data,
             label: node.data.title,
             isEditingTitle: editingNodeId === node.id,
-            onStartTitleEdit: onStartNodeTitleEdit,
-            onCommitTitleEdit: onCommitNodeTitleEdit,
-            onCancelTitleEdit: onCancelNodeTitleEdit,
+            onStartTitleEdit: isReadOnly ? null : onStartNodeTitleEdit,
+            onCommitTitleEdit: isReadOnly ? null : onCommitNodeTitleEdit,
+            onCancelTitleEdit: isReadOnly ? null : onCancelNodeTitleEdit,
             onEnterLinkedGraph,
           },
           selected: node.id === selectedNodeId,
-          draggable: true,
+          draggable: !isReadOnly,
           sourcePosition: node.sourcePosition ?? Position.Right,
           targetPosition: node.targetPosition ?? Position.Left,
           ...(node.data.kind === 'jump' && targetGraphId === currentGraphId
@@ -175,9 +177,9 @@ export function CanvasPane({
                   ...node.data,
                   label: node.data.title,
                   isEditingTitle: editingNodeId === node.id,
-                  onStartTitleEdit: onStartNodeTitleEdit,
-                  onCommitTitleEdit: onCommitNodeTitleEdit,
-                  onCancelTitleEdit: onCancelNodeTitleEdit,
+                  onStartTitleEdit: isReadOnly ? null : onStartNodeTitleEdit,
+                  onCommitTitleEdit: isReadOnly ? null : onCommitNodeTitleEdit,
+                  onCancelTitleEdit: isReadOnly ? null : onCancelNodeTitleEdit,
                   onEnterLinkedGraph,
                   targetGraphMissing: true,
                 },
@@ -188,6 +190,7 @@ export function CanvasPane({
     [
       currentGraphId,
       editingNodeId,
+      isReadOnly,
       nodes,
       onCancelNodeTitleEdit,
       onCommitNodeTitleEdit,
@@ -198,19 +201,31 @@ export function CanvasPane({
   );
 
   const handleNodesChange: OnNodesChange<KnowledgeNode> = (changes) => {
+    if (isReadOnly) {
+      return;
+    }
+
     onNodesChange(applyNodeChanges(changes, nodes));
   };
 
   const handleEdgesChange: OnEdgesChange<KnowledgeEdge> = (changes) => {
+    if (isReadOnly) {
+      return;
+    }
+
     onEdgesChange(applyEdgeChanges(changes, edges));
   };
 
   const handleConnect: OnConnect = (connection) => {
+    if (isReadOnly) {
+      return;
+    }
+
     onConnectEdge(connection);
   };
 
   function handleCanvasKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
-    if (editingNodeId || isTypingTarget(event.target)) {
+    if (isReadOnly || editingNodeId || isTypingTarget(event.target)) {
       return;
     }
 
@@ -342,6 +357,8 @@ export function CanvasPane({
           edges={edges}
           fitView
           nodeTypes={nodeTypes}
+          nodesConnectable={!isReadOnly}
+          nodesDraggable={!isReadOnly}
           nodes={displayNodes}
           onConnect={handleConnect}
           onEdgesChange={handleEdgesChange}
@@ -350,7 +367,9 @@ export function CanvasPane({
             surfaceRef.current?.focus();
           }}
           onNodeDoubleClick={(_, node) => {
-            onStartNodeTitleEdit(node.id);
+            if (!isReadOnly) {
+              onStartNodeTitleEdit(node.id);
+            }
           }}
           onNodesChange={handleNodesChange}
           onPaneClick={() => {

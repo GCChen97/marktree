@@ -108,6 +108,7 @@ describe('CanvasPane viewport bridge', () => {
         currentGraphId="graph_focus"
         editingNodeId={null}
         edges={[]}
+        isReadOnly={false}
         nodes={[node]}
         onCenterSelected={() => {}}
         onCancelNodeTitleEdit={() => {}}
@@ -203,6 +204,7 @@ describe('CanvasPane viewport bridge', () => {
         currentGraphId="graph_focus"
         editingNodeId={null}
         edges={[]}
+        isReadOnly={false}
         nodes={[node]}
         onCenterSelected={centerSelected}
         onCancelNodeTitleEdit={() => {}}
@@ -260,6 +262,7 @@ describe('CanvasPane viewport bridge', () => {
         currentGraphId="graph_focus"
         editingNodeId={null}
         edges={[]}
+        isReadOnly={false}
         nodes={[node]}
         onCenterSelected={() => {}}
         onCancelNodeTitleEdit={() => {}}

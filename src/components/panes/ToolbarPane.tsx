@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { LayoutMode } from '../../types/layout';
-import type { GraphId, NoteId } from '../../types/graph';
+import type { GraphId, NoteId, WorkspaceDataMode } from '../../types/graph';
 import type { ThemeMode } from '../../types/theme';
 
 type ToolbarInfo = {
@@ -29,6 +29,8 @@ type MarkdownListItem = {
 type ToolbarPaneProps = {
   mode: LayoutMode;
   onModeChange: (mode: LayoutMode) => void;
+  dataMode: WorkspaceDataMode;
+  isReadOnly: boolean;
   theme: ThemeMode;
   onThemeToggle: () => void;
   info: ToolbarInfo;
@@ -58,6 +60,11 @@ type ToolbarPaneProps = {
   selectedJumpTargetGraphId: GraphId | null;
   availableJumpTargetGraphs: Array<{ id: GraphId; title: string }>;
   onSetSelectedJumpTargetGraph: (graphId: GraphId | null) => void;
+  canSaveDataFiles: boolean;
+  directoryName: string | null;
+  directoryError: string | null;
+  onSelectDataDirectory: () => void;
+  onSaveDataFiles: () => void;
   importError: string | null;
   isMobile?: boolean;
 };
@@ -72,6 +79,8 @@ const layoutOptions: Array<{ mode: LayoutMode; label: string }> = [
 export function ToolbarPane({
   mode,
   onModeChange,
+  dataMode,
+  isReadOnly,
   theme,
   onThemeToggle,
   info,
@@ -101,6 +110,11 @@ export function ToolbarPane({
   selectedJumpTargetGraphId,
   availableJumpTargetGraphs,
   onSetSelectedJumpTargetGraph,
+  canSaveDataFiles,
+  directoryName,
+  directoryError,
+  onSelectDataDirectory,
+  onSaveDataFiles,
   importError,
   isMobile = false,
 }: ToolbarPaneProps) {
@@ -181,12 +195,17 @@ export function ToolbarPane({
       <section className="toolbar-section">
         <h2 className="section-title">图谱操作</h2>
         <div className="toolbar-action-list toolbar-action-list--inline">
-          <button className="toolbar-action-button" onClick={onCreateNode} type="button">
+          <button
+            className="toolbar-action-button"
+            disabled={isReadOnly}
+            onClick={onCreateNode}
+            type="button"
+          >
             新建节点
           </button>
           <button
             className="toolbar-action-button"
-            disabled={!canDeleteSelectedNode}
+            disabled={isReadOnly || !canDeleteSelectedNode}
             onClick={onDeleteSelectedNode}
             type="button"
           >
@@ -199,7 +218,10 @@ export function ToolbarPane({
               aria-label="跳转节点"
               checked={canUnsetSelectedJumpNode}
               className="toolbar-switch__input"
-              disabled={!canConvertSelectedNodeToJump && !canUnsetSelectedJumpNode}
+              disabled={
+                isReadOnly ||
+                (!canConvertSelectedNodeToJump && !canUnsetSelectedJumpNode)
+              }
               id="jump-node-toggle-inline"
               onChange={() => {
                 if (canUnsetSelectedJumpNode) {
@@ -223,7 +245,7 @@ export function ToolbarPane({
             <select
               aria-label="目标 Graph"
               className="toolbar-select"
-              disabled={!canUnsetSelectedJumpNode}
+              disabled={isReadOnly || !canUnsetSelectedJumpNode}
               onChange={(event) =>
                 onSetSelectedJumpTargetGraph(event.target.value || null)
               }
@@ -258,13 +280,34 @@ export function ToolbarPane({
             >
               导出整个 Workspace
             </button>
-            <button
-              className="toolbar-action-button"
-              onClick={() => importInputRef.current?.click()}
-              type="button"
-            >
-              导入 JSON
-            </button>
+            {!isReadOnly ? (
+              <button
+                className="toolbar-action-button"
+                onClick={() => importInputRef.current?.click()}
+                type="button"
+              >
+                导入 JSON
+              </button>
+            ) : null}
+            {dataMode === 'author-local' ? (
+              <>
+                <button
+                  className="toolbar-action-button"
+                  onClick={onSelectDataDirectory}
+                  type="button"
+                >
+                  选择目录
+                </button>
+                <button
+                  className="toolbar-action-button"
+                  disabled={!canSaveDataFiles}
+                  onClick={onSaveDataFiles}
+                  type="button"
+                >
+                  立即保存
+                </button>
+              </>
+            ) : null}
             <input
               accept=".json,application/json"
               className="visually-hidden"
@@ -282,6 +325,14 @@ export function ToolbarPane({
             />
           </div>
         </div>
+        <p className="section-copy">
+          {dataMode === 'author-local'
+            ? directoryName
+              ? `本地作者模式：已绑定目录「${directoryName}」。当前 graph 和 note 文件会直接写回仓库数据目录。`
+              : '本地作者模式：先选择一次 `public/data` 目录，之后即可把当前图谱改动直接写回仓库文件。'
+            : '只读模式：当前内容直接来自仓库里的静态 graph / note 文件。'}
+        </p>
+        {directoryError ? <p className="toolbar-feedback">{directoryError}</p> : null}
         {importError ? <p className="toolbar-feedback">{importError}</p> : null}
       </section>
 
@@ -291,74 +342,76 @@ export function ToolbarPane({
             <h2 className="section-title">Markdown 管理</h2>
             <span className="section-badge">{markdownItems.length} 个 Markdown</span>
           </div>
-          <div className="graph-management__header-actions">
-            <button
-              aria-label="新建 Markdown"
-              className="icon-action-button"
-              onClick={onCreateMarkdown}
-              title="新建 Markdown"
-              type="button"
-            >
-              <svg
-                aria-hidden="true"
-                className="icon-action-button__icon"
-                viewBox="0 0 16 16"
+          {!isReadOnly ? (
+            <div className="graph-management__header-actions">
+              <button
+                aria-label="新建 Markdown"
+                className="icon-action-button"
+                onClick={onCreateMarkdown}
+                title="新建 Markdown"
+                type="button"
               >
-                <path
-                  d="M8 3.25v9.5M3.25 8h9.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeWidth="1.5"
-                />
-              </svg>
-            </button>
-            <button
-              aria-label="重命名当前 Markdown"
-              className="icon-action-button"
-              disabled={!canRenameActiveMarkdown}
-              onClick={onRenameActiveMarkdown}
-              title="重命名当前 Markdown"
-              type="button"
-            >
-              <svg
-                aria-hidden="true"
-                className="icon-action-button__icon"
-                viewBox="0 0 16 16"
+                <svg
+                  aria-hidden="true"
+                  className="icon-action-button__icon"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M8 3.25v9.5M3.25 8h9.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeWidth="1.5"
+                  />
+                </svg>
+              </button>
+              <button
+                aria-label="重命名当前 Markdown"
+                className="icon-action-button"
+                disabled={!canRenameActiveMarkdown}
+                onClick={onRenameActiveMarkdown}
+                title="重命名当前 Markdown"
+                type="button"
               >
-                <path
-                  d="M3.5 11.5 11.8 3.2a1.5 1.5 0 0 1 2.1 2.1L5.6 13.6 2.5 14l.4-3.1Z"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinejoin="round"
-                  strokeWidth="1.35"
-                />
-              </svg>
-            </button>
-            <button
-              aria-label="删除当前 Markdown"
-              className="icon-action-button icon-action-button--danger"
-              disabled={!canDeleteActiveMarkdown}
-              onClick={onDeleteActiveMarkdown}
-              title="删除当前 Markdown"
-              type="button"
-            >
-              <svg
-                aria-hidden="true"
-                className="icon-action-button__icon"
-                viewBox="0 0 16 16"
+                <svg
+                  aria-hidden="true"
+                  className="icon-action-button__icon"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M3.5 11.5 11.8 3.2a1.5 1.5 0 0 1 2.1 2.1L5.6 13.6 2.5 14l.4-3.1Z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinejoin="round"
+                    strokeWidth="1.35"
+                  />
+                </svg>
+              </button>
+              <button
+                aria-label="删除当前 Markdown"
+                className="icon-action-button icon-action-button--danger"
+                disabled={!canDeleteActiveMarkdown}
+                onClick={onDeleteActiveMarkdown}
+                title="删除当前 Markdown"
+                type="button"
               >
-                <path
-                  d="M4.5 5.25v7.25a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V5.25M3.5 4.25h9M6.25 4.25v-1a.75.75 0 0 1 .75-.75h2a.75.75 0 0 1 .75.75v1M6.5 7v4M9.5 7v4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="1.35"
-                />
-              </svg>
-            </button>
-          </div>
+                <svg
+                  aria-hidden="true"
+                  className="icon-action-button__icon"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M4.5 5.25v7.25a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V5.25M3.5 4.25h9M6.25 4.25v-1a.75.75 0 0 1 .75-.75h2a.75.75 0 0 1 .75.75v1M6.5 7v4M9.5 7v4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.35"
+                  />
+                </svg>
+              </button>
+            </div>
+          ) : null}
         </div>
         <div className="toolbar-list-shell" data-testid="markdown-list">
           <ul aria-label="Markdown 列表" className="graph-list" role="listbox">
@@ -395,73 +448,75 @@ export function ToolbarPane({
             <h2 className="section-title">Graph 管理</h2>
             <span className="section-badge">{graphItems.length} 个 graph</span>
           </div>
-          <div className="graph-management__header-actions">
-            <button
-              aria-label="新建 Graph"
-              className="icon-action-button"
-              onClick={onCreateGraph}
-              title="新建 Graph"
-              type="button"
-            >
-              <svg
-                aria-hidden="true"
-                className="icon-action-button__icon"
-                viewBox="0 0 16 16"
+          {!isReadOnly ? (
+            <div className="graph-management__header-actions">
+              <button
+                aria-label="新建 Graph"
+                className="icon-action-button"
+                onClick={onCreateGraph}
+                title="新建 Graph"
+                type="button"
               >
-                <path
-                  d="M8 3.25v9.5M3.25 8h9.5"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeWidth="1.5"
-                />
-              </svg>
-            </button>
-            <button
-              aria-label="重命名当前 Graph"
-              className="icon-action-button"
-              onClick={onRenameCurrentGraph}
-              title="重命名当前 Graph"
-              type="button"
-            >
-              <svg
-                aria-hidden="true"
-                className="icon-action-button__icon"
-                viewBox="0 0 16 16"
+                <svg
+                  aria-hidden="true"
+                  className="icon-action-button__icon"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M8 3.25v9.5M3.25 8h9.5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeWidth="1.5"
+                  />
+                </svg>
+              </button>
+              <button
+                aria-label="重命名当前 Graph"
+                className="icon-action-button"
+                onClick={onRenameCurrentGraph}
+                title="重命名当前 Graph"
+                type="button"
               >
-                <path
-                  d="M3.5 11.5 11.8 3.2a1.5 1.5 0 0 1 2.1 2.1L5.6 13.6 2.5 14l.4-3.1Z"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinejoin="round"
-                  strokeWidth="1.35"
-                />
-              </svg>
-            </button>
-            <button
-              aria-label="删除当前 Graph"
-              className="icon-action-button icon-action-button--danger"
-              disabled={!canDeleteCurrentGraph}
-              onClick={onDeleteCurrentGraph}
-              title="删除当前 Graph"
-              type="button"
-            >
-              <svg
-                aria-hidden="true"
-                className="icon-action-button__icon"
-                viewBox="0 0 16 16"
+                <svg
+                  aria-hidden="true"
+                  className="icon-action-button__icon"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M3.5 11.5 11.8 3.2a1.5 1.5 0 0 1 2.1 2.1L5.6 13.6 2.5 14l.4-3.1Z"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinejoin="round"
+                    strokeWidth="1.35"
+                  />
+                </svg>
+              </button>
+              <button
+                aria-label="删除当前 Graph"
+                className="icon-action-button icon-action-button--danger"
+                disabled={!canDeleteCurrentGraph}
+                onClick={onDeleteCurrentGraph}
+                title="删除当前 Graph"
+                type="button"
               >
-                <path
-                  d="M4.5 5.25v7.25a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V5.25M3.5 4.25h9M6.25 4.25v-1a.75.75 0 0 1 .75-.75h2a.75.75 0 0 1 .75.75v1M6.5 7v4M9.5 7v4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="1.35"
-                />
-              </svg>
-            </button>
-          </div>
+                <svg
+                  aria-hidden="true"
+                  className="icon-action-button__icon"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M4.5 5.25v7.25a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1V5.25M3.5 4.25h9M6.25 4.25v-1a.75.75 0 0 1 .75-.75h2a.75.75 0 0 1 .75.75v1M6.5 7v4M9.5 7v4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.35"
+                  />
+                </svg>
+              </button>
+            </div>
+          ) : null}
         </div>
         <div className="toolbar-list-shell" data-testid="graph-list">
           <ul aria-label="Graph 列表" className="graph-list" role="listbox">

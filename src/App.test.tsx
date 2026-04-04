@@ -7,7 +7,6 @@ import {
 } from '@testing-library/react';
 import App from './App';
 import { MarkdownPane } from './components/panes/MarkdownPane';
-import { WORKSPACE_STORAGE_KEY } from './hooks/usePersistentWorkspaceState';
 import { LAYOUT_STORAGE_KEY } from './utils/layout';
 import { THEME_STORAGE_KEY } from './hooks/useThemePreference';
 import type { KnowledgeNode } from './types/graph';
@@ -180,47 +179,6 @@ describe('App', () => {
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('night');
   });
 
-  it('restores a stored version 3 workspace from localStorage', () => {
-    window.localStorage.setItem(
-      WORKSPACE_STORAGE_KEY,
-      JSON.stringify({
-        version: 3,
-        graphs: {
-          graph_main: {
-            id: 'graph_main',
-            title: 'Main Graph',
-            nodes: [
-              {
-                id: 'node_saved',
-                position: { x: 24, y: 48 },
-                data: {
-                  title: 'Saved Node',
-                  noteId: 'note_saved',
-                },
-              },
-            ],
-            edges: [],
-          },
-        },
-        notes: {
-          note_saved: {
-            id: 'note_saved',
-            title: 'Saved Node',
-            content: '# Saved Node\n\nRestored content.',
-          },
-        },
-        graphOrder: ['graph_main'],
-        noteOrder: ['note_saved'],
-        currentGraphId: 'graph_main',
-      }),
-    );
-
-    render(<App />);
-
-    expect(screen.getAllByText('Saved Node').length).toBeGreaterThan(0);
-    expect(getGraphItem('Main Graph')).toBeInTheDocument();
-  });
-
   it('renders the mobile single-pane layout below 900px and defaults to canvas', () => {
     isMobileViewport = true;
 
@@ -233,6 +191,16 @@ describe('App', () => {
       'aria-current',
       'page',
     );
+  });
+
+  it('shows repo file controls in local author mode', () => {
+    render(<App />);
+
+    expect(screen.getByRole('button', { name: '选择目录' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '立即保存' })).toBeDisabled();
+    expect(
+      screen.getByText(/先选择一次 `public\/data` 目录/i),
+    ).toBeInTheDocument();
   });
 
   it('creates and renames graphs from the toolbar list', async () => {
@@ -464,12 +432,6 @@ describe('App', () => {
 
     expect(screen.getAllByText('Untitled').length).toBeGreaterThan(0);
     expect(screen.getByText('在这里写内容。')).toBeInTheDocument();
-    expect(
-      JSON.parse(window.localStorage.getItem(WORKSPACE_STORAGE_KEY) ?? '{}'),
-    ).toMatchObject({
-      version: 3,
-      currentGraphId: 'graph_main',
-    });
 
     createNodeIdSpy.mockRestore();
     createNoteIdSpy.mockRestore();

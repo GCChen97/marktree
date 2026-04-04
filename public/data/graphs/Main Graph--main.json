@@ -1,0 +1,75 @@
+{
+  "id": "graph_main",
+  "title": "Main Graph",
+  "nodes": [
+    {
+      "id": "node_graph",
+      "position": {
+        "x": 64.65781967014556,
+        "y": 183.0132704947817
+      },
+      "data": {
+        "title": "Knowledge Graph",
+        "noteId": "note_graph",
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_flow",
+      "position": {
+        "x": 360,
+        "y": 120
+      },
+      "data": {
+        "title": "React Flow",
+        "noteId": "note_flow",
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_markdown",
+      "position": {
+        "x": 660,
+        "y": 200
+      },
+      "data": {
+        "title": "Markdown Pane",
+        "noteId": "note_markdown",
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775274805860_2",
+      "position": {
+        "x": 360,
+        "y": 240
+      },
+      "data": {
+        "title": "Untitled",
+        "noteId": "note_1775274805860_2",
+        "kind": "default"
+      },
+      "type": "mind"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_graph_flow",
+      "source": "node_graph",
+      "target": "node_flow"
+    },
+    {
+      "id": "edge_flow_markdown",
+      "source": "node_flow",
+      "target": "node_markdown"
+    },
+    {
+      "id": "edge_node_graph_default-source_node_1775274805860_2_default-target_1775274805860",
+      "source": "node_graph",
+      "target": "node_1775274805860_2"
+    }
+  ]
+}

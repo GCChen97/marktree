@@ -36,6 +36,17 @@ export function ThreePaneLayout({
       return;
     }
 
+    const updateWidth = () => {
+      setContainerWidth(shell.getBoundingClientRect().width || 1280);
+    };
+
+    if (typeof ResizeObserver !== 'function') {
+      updateWidth();
+      window.addEventListener('resize', updateWidth);
+
+      return () => window.removeEventListener('resize', updateWidth);
+    }
+
     const observer = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width;
 
@@ -45,7 +56,7 @@ export function ThreePaneLayout({
     });
 
     observer.observe(shell);
-    setContainerWidth(shell.getBoundingClientRect().width || 1280);
+    updateWidth();
 
     return () => observer.disconnect();
   }, []);

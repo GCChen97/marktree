@@ -1,42 +1,275 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { SetStateAction } from 'react';
 import { createDefaultWorkspaceState } from '../data/defaultGraph';
-import type { WorkspaceState } from '../types/graph';
-import { exportWorkspaceData, parseStoredWorkspaceString } from '../utils/graph';
+import type {
+  LocalDataDirectoryState,
+  RepoWorkspaceManifest,
+  WorkspaceDataMode,
+  WorkspaceState,
+} from '../types/graph';
+import { rememberDirectoryHandle, restoreDirectoryHandle } from '../utils/directoryHandle';
+import {
+  createManifestFromWorkspace,
+  getDefaultLocalDataDirectoryState,
+  loadRepoWorkspace,
+  saveWorkspaceToDirectory,
+} from '../utils/repoData';
 
-export const WORKSPACE_STORAGE_KEY = 'mymind.phase6.workspace';
+export const WORKSPACE_STORAGE_KEY = 'mymind.phase8.workspace.legacy';
 
-function readStoredWorkspace(): WorkspaceState {
-  const fallbackWorkspace = createDefaultWorkspaceState();
+type PermissionMode = 'read' | 'readwrite';
 
-  if (typeof window === 'undefined') {
-    return fallbackWorkspace;
+type DirectoryHandleWithPermissions = FileSystemDirectoryHandle & {
+  queryPermission?: (descriptor?: { mode?: PermissionMode }) => Promise<PermissionState>;
+  requestPermission?: (descriptor?: { mode?: PermissionMode }) => Promise<PermissionState>;
+};
+
+type WindowWithDirectoryPicker = Window &
+  typeof globalThis & {
+    showDirectoryPicker?: (options?: {
+      mode?: PermissionMode;
+    }) => Promise<FileSystemDirectoryHandle>;
+  };
+
+function getInitialWorkspaceState() {
+  if (import.meta.env.MODE === 'test') {
+    return createDefaultWorkspaceState();
   }
 
-  const rawValue = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
+  return null;
+}
 
-  if (!rawValue) {
-    return fallbackWorkspace;
-  }
-
-  const parsed = parseStoredWorkspaceString(rawValue);
-
-  return parsed ?? fallbackWorkspace;
+function getInitialManifestState(workspace: WorkspaceState | null): RepoWorkspaceManifest | null {
+  return import.meta.env.MODE === 'test' && workspace
+    ? createManifestFromWorkspace(workspace)
+    : null;
 }
 
 export function usePersistentWorkspaceState() {
-  const [workspace, setWorkspace] = useState<WorkspaceState>(() =>
-    readStoredWorkspace(),
+  const initialWorkspace = getInitialWorkspaceState();
+  const [workspace, setWorkspace] = useState<WorkspaceState | null>(initialWorkspace);
+  const [manifest, setManifest] = useState<RepoWorkspaceManifest | null>(
+    getInitialManifestState(initialWorkspace),
   );
+  const [isLoading, setIsLoading] = useState(!initialWorkspace);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [dataMode] = useState<WorkspaceDataMode>(
+    import.meta.env.DEV ? 'author-local' : 'repo-static',
+  );
+  const [localDataDirectoryState, setLocalDataDirectoryState] =
+    useState<LocalDataDirectoryState>(getDefaultLocalDataDirectoryState());
+  const directoryHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
+  const manifestRef = useRef<RepoWorkspaceManifest | null>(null);
+  const skipNextAutoSaveRef = useRef(true);
 
   useEffect(() => {
-    window.localStorage.setItem(
-      WORKSPACE_STORAGE_KEY,
-      JSON.stringify(exportWorkspaceData(workspace)),
-    );
+    if (initialWorkspace) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void loadRepoWorkspace()
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+
+        setWorkspace(result.workspace);
+        setManifest(result.manifest);
+        setIsLoading(false);
+        setLoadError(null);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        setLoadError(
+          error instanceof Error ? error.message : '加载 repo 数据失败。',
+        );
+        setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialWorkspace]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || typeof window === 'undefined' || !window.indexedDB) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void restoreDirectoryHandle()
+      .then(async (directoryHandle) => {
+        if (cancelled || !directoryHandle) {
+          return;
+        }
+
+        const writableDirectoryHandle =
+          directoryHandle as DirectoryHandleWithPermissions;
+        const permission = await writableDirectoryHandle.queryPermission?.({
+          mode: 'readwrite',
+        });
+
+        if (permission !== 'granted') {
+          return;
+        }
+
+        directoryHandleRef.current = directoryHandle;
+        setLocalDataDirectoryState({
+          hasWritableDirectory: true,
+          directoryName: directoryHandle.name,
+          lastError: null,
+        });
+      })
+      .catch(() => {
+        setLocalDataDirectoryState(getDefaultLocalDataDirectoryState());
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    manifestRef.current = manifest;
+  }, [manifest]);
+
+  const saveWorkspaceNow = useCallback(async () => {
+    if (!workspace || !directoryHandleRef.current) {
+      return false;
+    }
+
+    try {
+      const nextManifest = await saveWorkspaceToDirectory(
+        directoryHandleRef.current,
+        workspace,
+        manifestRef.current,
+      );
+
+      manifestRef.current = nextManifest;
+      setManifest(nextManifest);
+      setLocalDataDirectoryState((currentState) => ({
+        ...currentState,
+        lastError: null,
+      }));
+
+      return true;
+    } catch (error) {
+      setLocalDataDirectoryState((currentState) => ({
+        ...currentState,
+        lastError:
+          error instanceof Error ? error.message : '写入 repo 文件失败。',
+      }));
+
+      return false;
+    }
   }, [workspace]);
+
+  useEffect(() => {
+    if (
+      !import.meta.env.DEV ||
+      !workspace ||
+      !directoryHandleRef.current ||
+      !manifestRef.current
+    ) {
+      return;
+    }
+
+    if (skipNextAutoSaveRef.current) {
+      skipNextAutoSaveRef.current = false;
+      return;
+    }
+
+    void saveWorkspaceNow();
+  }, [saveWorkspaceNow, workspace]);
+
+  const selectDataDirectory = useCallback(async () => {
+    const pickerWindow = window as WindowWithDirectoryPicker;
+
+    if (
+      !import.meta.env.DEV ||
+      typeof window === 'undefined' ||
+      typeof pickerWindow.showDirectoryPicker !== 'function'
+    ) {
+      setLocalDataDirectoryState({
+        hasWritableDirectory: false,
+        directoryName: null,
+        lastError: '当前浏览器不支持目录写入。',
+      });
+      return false;
+    }
+
+    try {
+      const directoryHandle = await pickerWindow.showDirectoryPicker({
+        mode: 'readwrite',
+      });
+      const writableDirectoryHandle =
+        directoryHandle as DirectoryHandleWithPermissions;
+
+      const permission = await writableDirectoryHandle.requestPermission?.({
+        mode: 'readwrite',
+      });
+
+      if (permission !== 'granted') {
+        setLocalDataDirectoryState({
+          hasWritableDirectory: false,
+          directoryName: null,
+          lastError: '目录写入权限未授予。',
+        });
+        return false;
+      }
+
+      directoryHandleRef.current = directoryHandle;
+      skipNextAutoSaveRef.current = false;
+      await rememberDirectoryHandle(directoryHandle);
+      setLocalDataDirectoryState({
+        hasWritableDirectory: true,
+        directoryName: directoryHandle.name,
+        lastError: null,
+      });
+
+      return true;
+    } catch (error) {
+      setLocalDataDirectoryState({
+        hasWritableDirectory: false,
+        directoryName: null,
+        lastError:
+          error instanceof Error ? error.message : '选择目录失败。',
+      });
+
+      return false;
+    }
+  }, []);
+
+  const updateWorkspace = useCallback(
+    (nextWorkspace: SetStateAction<WorkspaceState>) => {
+      setWorkspace((currentWorkspace) => {
+        const baseWorkspace = currentWorkspace ?? createDefaultWorkspaceState();
+
+        return typeof nextWorkspace === 'function'
+          ? (nextWorkspace as (workspace: WorkspaceState) => WorkspaceState)(
+              baseWorkspace,
+            )
+          : nextWorkspace;
+      });
+    },
+    [],
+  );
 
   return {
     workspace,
-    setWorkspace,
+    setWorkspace: updateWorkspace,
+    isLoading,
+    loadError,
+    dataMode,
+    isReadOnly: dataMode === 'repo-static',
+    localDataDirectoryState,
+    selectDataDirectory,
+    saveWorkspaceNow,
   };
 }

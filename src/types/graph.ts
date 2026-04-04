@@ -62,6 +62,23 @@ export type ExportedGraphData = {
 
 export type ExportedWorkspaceData = WorkspaceState;
 
+export type RepoWorkspaceManifest = {
+  version: 1;
+  currentGraphId: GraphId;
+  graphOrder: GraphId[];
+  noteOrder: NoteId[];
+  graphs: Record<GraphId, { title: string; file: string }>;
+  notes: Record<NoteId, { title: string; file: string }>;
+};
+
+export type WorkspaceDataMode = 'repo-static' | 'author-local';
+
+export type LocalDataDirectoryState = {
+  hasWritableDirectory: boolean;
+  directoryName: string | null;
+  lastError: string | null;
+};
+
 export type GraphReferenceRecord = {
   sourceGraphId: GraphId;
   sourceGraphTitle: string;

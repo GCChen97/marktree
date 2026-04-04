@@ -121,9 +121,8 @@ button {
 
 .pane-content--canvas,
 .pane-content--markdown {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: var(--space-4);
+  display: flex;
+  flex-direction: column;
 }
 
 .pane-header {
@@ -174,6 +173,20 @@ button {
   align-items: center;
   justify-content: flex-end;
   flex-shrink: 0;
+}
+
+.toolbar-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.toolbar-topbar__title {
+  margin: 0;
+  margin-right: auto;
+  font-size: 1.15rem;
+  line-height: 1.1;
 }
 
 .toolbar-section {
@@ -811,6 +824,7 @@ button {
 }
 
 .canvas-surface {
+  flex: 1;
   position: relative;
   overflow: hidden;
   min-height: 0;
@@ -1135,6 +1149,7 @@ button {
 }
 
 .markdown-shell {
+  flex: 1;
   display: grid;
   grid-template-rows: auto 1fr;
   overflow: hidden;

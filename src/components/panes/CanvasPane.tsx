@@ -315,16 +315,6 @@ export function CanvasPane({
       className="pane-content pane-content--canvas"
       data-mobile={isMobile}
     >
-      <header
-        className={`pane-header pane-header--compact${isMobile ? ' pane-header--mobile' : ''}`}
-      >
-        <p className="pane-eyebrow">Phase 7</p>
-        <h2 className="pane-title">思维导图画布</h2>
-        <p className="pane-description">
-          当前 graph 的节点、跳转节点与 markdown 关系都在这里呈现，支持快捷键和双击编辑。
-        </p>
-      </header>
-
       <div
         className="canvas-surface"
         data-testid="graph-canvas-surface"

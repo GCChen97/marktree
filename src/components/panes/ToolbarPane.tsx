@@ -207,33 +207,23 @@ export function ToolbarPane({
       className="pane-content pane-content--toolbar"
       data-mobile={isMobile}
     >
-      <header className={`pane-header${isMobile ? ' pane-header--mobile' : ''}`}>
-        <div className="toolbar-header-row">
-          <div className="toolbar-header-copy">
-            <p className="pane-eyebrow">Phase 7</p>
-            <h1 className="pane-title">MyMind Workspace</h1>
-            <p className="pane-description">
-              当前 graph 的节点编辑、markdown 关联和 workspace 管理都集中在这里。
-            </p>
-          </div>
-          <div className="toolbar-header-actions">
-            <label className="theme-switch theme-switch--compact" htmlFor="theme-toggle">
-              <input
-                aria-label="夜晚主题"
-                checked={theme === 'night'}
-                className="theme-switch__input"
-                id="theme-toggle"
-                onChange={onThemeToggle}
-                role="switch"
-                type="checkbox"
-              />
-              <span aria-hidden="true" className="theme-switch__track">
-                <span className="theme-switch__thumb" />
-              </span>
-            </label>
-          </div>
-        </div>
-      </header>
+      <div className="toolbar-topbar">
+        <h1 className="toolbar-topbar__title">MarkGraph</h1>
+        <label className="theme-switch theme-switch--compact" htmlFor="theme-toggle">
+          <input
+            aria-label="夜晚主题"
+            checked={theme === 'night'}
+            className="theme-switch__input"
+            id="theme-toggle"
+            onChange={onThemeToggle}
+            role="switch"
+            type="checkbox"
+          />
+          <span aria-hidden="true" className="theme-switch__track">
+            <span className="theme-switch__thumb" />
+          </span>
+        </label>
+      </div>
 
       <section className="toolbar-section">
         <div className="section-heading-row">
@@ -568,15 +558,15 @@ export function ToolbarPane({
                       onClick={(event) => event.stopPropagation()}
                       onDoubleClick={(event) => event.stopPropagation()}
                       onKeyDown={(event) => {
+                        event.stopPropagation();
+
                         if (event.key === 'Enter') {
                           event.preventDefault();
-                          event.stopPropagation();
                           onCommitMarkdownRename(markdownItem.id, markdownRenameDraft);
                         }
 
                         if (event.key === 'Escape') {
                           event.preventDefault();
-                          event.stopPropagation();
                           onStartMarkdownRename(null);
                           setMarkdownRenameDraft('');
                         }
@@ -707,15 +697,15 @@ export function ToolbarPane({
                       onClick={(event) => event.stopPropagation()}
                       onDoubleClick={(event) => event.stopPropagation()}
                       onKeyDown={(event) => {
+                        event.stopPropagation();
+
                         if (event.key === 'Enter') {
                           event.preventDefault();
-                          event.stopPropagation();
                           onCommitGraphRename(graphItem.id, graphRenameDraft);
                         }
 
                         if (event.key === 'Escape') {
                           event.preventDefault();
-                          event.stopPropagation();
                           onStartGraphRename(null);
                           setGraphRenameDraft('');
                         }

@@ -117,9 +117,9 @@ describe('App', () => {
   it('renders the default desktop layout with graph and markdown management visible', () => {
     render(<App />);
 
-    expect(screen.getByText('MyMind Workspace')).toBeInTheDocument();
     expect(screen.getByText('Markdown 管理')).toBeInTheDocument();
     expect(screen.getByText('Graph 管理')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /夜晚主题/i })).toBeInTheDocument();
     expect(
       screen.getByText('Markdown 管理').compareDocumentPosition(
         screen.getByText('Graph 管理'),
@@ -229,6 +229,39 @@ describe('App', () => {
     fireEvent.change(inlineEditor, { target: { value: 'Renamed Graph' } });
     fireEvent.keyDown(inlineEditor, { key: 'Enter' });
     expect(getGraphItem('Renamed Graph')).toBeInTheDocument();
+
+    createGraphIdSpy.mockRestore();
+    createNodeIdSpy.mockRestore();
+  });
+
+  it('keeps inline graph rename active while typing spaces', async () => {
+    const createGraphIdSpy = vi
+      .spyOn(graphUtils, 'createGraphId')
+      .mockReturnValue('graph_created');
+    const createNodeIdSpy = vi
+      .spyOn(graphUtils, 'createNodeId')
+      .mockReturnValue('node_created_root');
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: '新建 Graph' }));
+
+    await waitFor(() => {
+      expect(getGraphItem('Untitled Graph')).toBeInTheDocument();
+    });
+
+    fireEvent.doubleClick(getGraphItem('Untitled Graph'));
+    const inlineEditor = await screen.findByLabelText('重命名 Graph', {
+      selector: 'input',
+    });
+
+    fireEvent.keyDown(inlineEditor, { key: ' ' });
+    expect(screen.getByLabelText('重命名 Graph', { selector: 'input' })).toBeInTheDocument();
+
+    fireEvent.change(inlineEditor, { target: { value: 'Renamed Graph Two' } });
+    fireEvent.keyDown(inlineEditor, { key: 'Enter' });
+
+    expect(getGraphItem('Renamed Graph Two')).toBeInTheDocument();
 
     createGraphIdSpy.mockRestore();
     createNodeIdSpy.mockRestore();
@@ -567,6 +600,10 @@ describe('App', () => {
     const inlineEditor = await screen.findByLabelText('重命名 Markdown', {
       selector: 'input',
     });
+    fireEvent.keyDown(inlineEditor, { key: ' ' });
+    expect(
+      screen.getByLabelText('重命名 Markdown', { selector: 'input' }),
+    ).toBeInTheDocument();
     fireEvent.change(inlineEditor, { target: { value: 'Renamed Markdown' } });
     fireEvent.keyDown(inlineEditor, { key: 'Enter' });
 

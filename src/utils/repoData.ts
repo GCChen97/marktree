@@ -47,6 +47,17 @@ function parseJson(raw: string): unknown | null {
   }
 }
 
+function isHtmlDocumentContent(content: string) {
+  const normalized = content.trimStart().slice(0, 256).toLocaleLowerCase();
+
+  return (
+    normalized.startsWith('<!doctype html') ||
+    normalized.startsWith('<html') ||
+    normalized.includes('<head>') ||
+    normalized.includes('<body>')
+  );
+}
+
 function encodePathSegment(segment: string) {
   return encodeURIComponent(segment).replace(/%2F/g, '/');
 }
@@ -400,6 +411,12 @@ export async function loadRepoWorkspace(): Promise<{
       }
 
       const content = await response.text();
+
+      if (isHtmlDocumentContent(content)) {
+        throw new Error(
+          `note 文件不是有效的 Markdown，返回了 HTML 页面：${noteMeta.file}`,
+        );
+      }
 
       return [
         noteId,

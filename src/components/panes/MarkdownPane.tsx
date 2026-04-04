@@ -22,23 +22,12 @@ export function MarkdownPane({
       className="pane-content pane-content--markdown"
       data-mobile={isMobile}
     >
-      <header
-        className={`pane-header pane-header--compact${isMobile ? ' pane-header--mobile' : ''}`}
-      >
-        <p className="pane-eyebrow">Pane C</p>
-        <h2 className="pane-title">Markdown 详情</h2>
-        <p className="pane-description">
-          右侧面板现在负责只读渲染选中节点的 Markdown 内容，支持 GFM 与
-          LaTeX。
-        </p>
-      </header>
-
-        <div className="markdown-shell" data-mobile={isMobile}>
-          <div className="markdown-shell__titlebar" data-mobile={isMobile}>
-            <strong>{selectedNode?.data.title ?? '未选择节点'}</strong>
-            <span>{selectedNode?.data.noteId ?? '未关联 Markdown'}</span>
-          </div>
-          <div className="markdown-shell__body">
+      <div className="markdown-shell" data-mobile={isMobile}>
+        <div className="markdown-shell__titlebar" data-mobile={isMobile}>
+          <strong>{selectedNode?.data.title ?? '未选择节点'}</strong>
+          <span>{selectedNode?.data.noteId ?? '未关联 Markdown'}</span>
+        </div>
+        <div className="markdown-shell__body">
           {!selectedNode ? (
             <div className="markdown-empty-state">
               <p>{hasMultipleSelection ? '当前选择了多个节点。' : '请选择一个节点。'}</p>

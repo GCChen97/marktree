@@ -128,6 +128,8 @@ function App() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [activeMarkdownId, setActiveMarkdownId] = useState<NoteId | null>(null);
+  const [editingGraphId, setEditingGraphId] = useState<GraphId | null>(null);
+  const [editingMarkdownId, setEditingMarkdownId] = useState<NoteId | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [mobileActiveTab, setMobileActiveTab] =
     useState<MobilePaneTab>('canvas');
@@ -462,6 +464,7 @@ function App() {
     setImportError(null);
     setSelectedNodeId(null);
     setEditingNodeId(null);
+    setEditingGraphId(null);
     setWorkspace((currentWorkspace) => ({
       ...currentWorkspace,
       currentGraphId: graphId,
@@ -471,22 +474,14 @@ function App() {
   function handleCreateGraph() {
     const graphId = createGraphId();
     const rootNodeId = createNodeId();
-    const rootNoteId = createNoteId();
 
     applyWorkspaceMutation(
       (currentWorkspace) => {
-        const rootNoteTitle = getUniqueMarkdownTitle(
-          currentWorkspace.notes,
-          currentWorkspace.noteOrder,
-          'Start',
-        );
         const nextGraph = createNewGraphDocument(
           graphId,
           DEFAULT_NEW_GRAPH_TITLE,
           rootNodeId,
-          rootNoteId,
         );
-        const nextNote = createDefaultNoteForNode(rootNoteId, rootNoteTitle);
 
         return {
           ...currentWorkspace,
@@ -494,35 +489,28 @@ function App() {
             ...currentWorkspace.graphs,
             [graphId]: nextGraph,
           },
-          notes: {
-            ...currentWorkspace.notes,
-            [rootNoteId]: nextNote,
-          },
           graphOrder: [...currentWorkspace.graphOrder, graphId],
-          noteOrder: [...currentWorkspace.noteOrder, rootNoteId],
           currentGraphId: graphId,
         };
       },
       {
         selectedNodeId: null,
         editingNodeId: null,
-        activeMarkdownId: rootNoteId,
+        activeMarkdownId: null,
       },
     );
     setImportError(null);
   }
 
-  function handleRenameCurrentGraph() {
-    if (!currentGraph || isReadOnly) {
+  function handleCommitGraphRename(graphId: GraphId, title: string) {
+    if (isReadOnly) {
       return;
     }
 
-    const nextTitle = window.prompt(
-      '请输入新的 graph 名称',
-      currentGraph.title,
-    );
+    const nextTitle = title.trim();
 
-    if (!nextTitle?.trim()) {
+    if (!nextTitle) {
+      setEditingGraphId(null);
       return;
     }
 
@@ -530,12 +518,13 @@ function App() {
       ...currentWorkspace,
       graphs: {
         ...currentWorkspace.graphs,
-        [currentWorkspace.currentGraphId]: {
-          ...currentWorkspace.graphs[currentWorkspace.currentGraphId],
+        [graphId]: {
+          ...currentWorkspace.graphs[graphId],
           title: nextTitle.trim(),
         },
       },
     }));
+    setEditingGraphId(null);
   }
 
   function handleDeleteCurrentGraph() {
@@ -581,7 +570,6 @@ function App() {
     const position =
       canvasViewportApi?.getCanvasCenterPosition() ?? DEFAULT_NEW_NODE_POSITION;
     const nodeId = createNodeId();
-    const noteId = createNoteId();
 
     applyWorkspaceMutation(
       (currentWorkspace) => {
@@ -591,13 +579,7 @@ function App() {
           return currentWorkspace;
         }
 
-        const noteTitle = getUniqueMarkdownTitle(
-          currentWorkspace.notes,
-          currentWorkspace.noteOrder,
-          DEFAULT_NEW_MARKDOWN_TITLE,
-        );
-        const note = createDefaultNoteForNode(noteId, noteTitle);
-        const node = createDefaultNodeAtPosition(nodeId, noteId, position);
+        const node = createDefaultNodeAtPosition(nodeId, null, position);
 
         return {
           ...currentWorkspace,
@@ -608,16 +590,11 @@ function App() {
               nodes: [...graph.nodes, node],
             },
           },
-          notes: {
-            ...currentWorkspace.notes,
-            [noteId]: note,
-          },
-          noteOrder: [...currentWorkspace.noteOrder, noteId],
         };
       },
       {
         selectedNodeId: nodeId,
-        activeMarkdownId: noteId,
+        activeMarkdownId: null,
       },
     );
     setImportError(null);
@@ -629,8 +606,6 @@ function App() {
     }
 
     const nodeId = createNodeId();
-    const noteId = createNoteId();
-
     applyWorkspaceMutation(
       (currentWorkspace) => {
         const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
@@ -639,13 +614,7 @@ function App() {
           return currentWorkspace;
         }
 
-        const noteTitle = getUniqueMarkdownTitle(
-          currentWorkspace.notes,
-          currentWorkspace.noteOrder,
-          DEFAULT_NEW_MARKDOWN_TITLE,
-        );
-        const note = createDefaultNoteForNode(noteId, noteTitle);
-        const node = createDefaultNodeAtPosition(nodeId, noteId, {
+        const node = createDefaultNodeAtPosition(nodeId, null, {
           x: selectedNode.position.x + 240,
           y: selectedNode.position.y + 120,
         });
@@ -665,17 +634,12 @@ function App() {
               edges: [...graph.edges, nextEdge],
             },
           },
-          notes: {
-            ...currentWorkspace.notes,
-            [noteId]: note,
-          },
-          noteOrder: [...currentWorkspace.noteOrder, noteId],
         };
       },
       {
         selectedNodeId: nodeId,
         editingNodeId: nodeId,
-        activeMarkdownId: noteId,
+        activeMarkdownId: null,
       },
     );
     setImportError(null);
@@ -690,7 +654,6 @@ function App() {
       (edge) => edge.target === selectedNode.id,
     );
     const nodeId = createNodeId();
-    const noteId = createNoteId();
     const siblingPosition = {
       x: selectedNode.position.x,
       y: selectedNode.position.y + 120,
@@ -708,12 +671,6 @@ function App() {
           return currentWorkspace;
         }
 
-        const noteTitle = getUniqueMarkdownTitle(
-          currentWorkspace.notes,
-          currentWorkspace.noteOrder,
-          DEFAULT_NEW_MARKDOWN_TITLE,
-        );
-        const note = createDefaultNoteForNode(noteId, noteTitle);
         let nextPosition = siblingPosition;
         let nextEdge: KnowledgeEdge | null = null;
 
@@ -732,7 +689,7 @@ function App() {
           };
         }
 
-        const node = createDefaultNodeAtPosition(nodeId, noteId, nextPosition);
+        const node = createDefaultNodeAtPosition(nodeId, null, nextPosition);
 
         return {
           ...currentWorkspace,
@@ -744,17 +701,12 @@ function App() {
               edges: nextEdge ? [...graph.edges, nextEdge] : graph.edges,
             },
           },
-          notes: {
-            ...currentWorkspace.notes,
-            [noteId]: note,
-          },
-          noteOrder: [...currentWorkspace.noteOrder, noteId],
         };
       },
       {
         selectedNodeId: nodeId,
         editingNodeId: nodeId,
-        activeMarkdownId: noteId,
+        activeMarkdownId: null,
       },
     );
     setImportError(null);
@@ -1011,6 +963,7 @@ function App() {
   }
 
   function handleSelectMarkdown(noteId: NoteId) {
+    setEditingMarkdownId(null);
     setActiveMarkdownId(noteId);
   }
 
@@ -1054,17 +1007,15 @@ function App() {
     );
   }
 
-  function handleRenameActiveMarkdown() {
-    if (!activeMarkdownId || !workspaceState.notes[activeMarkdownId] || isReadOnly) {
+  function handleCommitMarkdownRename(noteId: NoteId, title: string) {
+    if (!workspaceState.notes[noteId] || isReadOnly) {
       return;
     }
 
-    const nextTitleInput = window.prompt(
-      '请输入新的 Markdown 名称',
-      workspaceState.notes[activeMarkdownId].title,
-    );
+    const nextTitleInput = title.trim();
 
-    if (!nextTitleInput?.trim()) {
+    if (!nextTitleInput) {
+      setEditingMarkdownId(null);
       return;
     }
 
@@ -1072,17 +1023,18 @@ function App() {
       ...currentWorkspace,
       notes: {
         ...currentWorkspace.notes,
-        [activeMarkdownId]: {
-          ...currentWorkspace.notes[activeMarkdownId],
+        [noteId]: {
+          ...currentWorkspace.notes[noteId],
           title: getUniqueMarkdownTitle(
             currentWorkspace.notes,
             currentWorkspace.noteOrder,
             nextTitleInput,
-            activeMarkdownId,
+            noteId,
           ),
         },
       },
     }));
+    setEditingMarkdownId(null);
   }
 
   function handleDeleteActiveMarkdown() {
@@ -1183,6 +1135,10 @@ function App() {
       isMobile={isMobile}
       markdownItems={markdownItems}
       mode={mode}
+      editingGraphId={editingGraphId}
+      editingMarkdownId={editingMarkdownId}
+      onCommitGraphRename={handleCommitGraphRename}
+      onCommitMarkdownRename={handleCommitMarkdownRename}
       onConvertSelectedNodeToJump={handleConvertSelectedNodeToJump}
       onCreateGraph={handleCreateGraph}
       onCreateMarkdown={handleCreateMarkdown}
@@ -1194,8 +1150,8 @@ function App() {
       onExportWorkspace={handleExportWorkspace}
       onImportData={handleImportData}
       onModeChange={setMode}
-      onRenameActiveMarkdown={handleRenameActiveMarkdown}
-      onRenameCurrentGraph={handleRenameCurrentGraph}
+      onStartGraphRename={setEditingGraphId}
+      onStartMarkdownRename={setEditingMarkdownId}
       onSaveDataFiles={() => {
         void saveWorkspaceNow();
       }}

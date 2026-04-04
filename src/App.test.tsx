@@ -210,9 +210,6 @@ describe('App', () => {
     const createNodeIdSpy = vi
       .spyOn(graphUtils, 'createNodeId')
       .mockReturnValue('node_created_root');
-    const createNoteIdSpy = vi
-      .spyOn(graphUtils, 'createNoteId')
-      .mockReturnValue('note_created_root');
 
     render(<App />);
 
@@ -223,14 +220,18 @@ describe('App', () => {
     });
 
     expect(screen.getAllByText('Start').length).toBeGreaterThan(0);
+    expect(getMarkdownList().getAllByRole('option')).toHaveLength(3);
 
-    fireEvent.click(screen.getByRole('button', { name: '重命名当前 Graph' }));
-    expect(promptSpy).toHaveBeenCalled();
+    fireEvent.doubleClick(getGraphItem('Untitled Graph'));
+    const inlineEditor = await screen.findByLabelText('重命名 Graph', {
+      selector: 'input',
+    });
+    fireEvent.change(inlineEditor, { target: { value: 'Renamed Graph' } });
+    fireEvent.keyDown(inlineEditor, { key: 'Enter' });
     expect(getGraphItem('Renamed Graph')).toBeInTheDocument();
 
     createGraphIdSpy.mockRestore();
     createNodeIdSpy.mockRestore();
-    createNoteIdSpy.mockRestore();
   });
 
   it('switches between graphs from the graph list', async () => {
@@ -240,9 +241,6 @@ describe('App', () => {
     const createNodeIdSpy = vi
       .spyOn(graphUtils, 'createNodeId')
       .mockReturnValue('node_created_root');
-    const createNoteIdSpy = vi
-      .spyOn(graphUtils, 'createNoteId')
-      .mockReturnValue('note_created_root');
 
     render(<App />);
 
@@ -255,7 +253,6 @@ describe('App', () => {
 
     createGraphIdSpy.mockRestore();
     createNodeIdSpy.mockRestore();
-    createNoteIdSpy.mockRestore();
   });
 
   it('syncs selected node details to the toolbar and markdown pane', () => {
@@ -316,9 +313,6 @@ describe('App', () => {
     const createNodeIdSpy = vi
       .spyOn(graphUtils, 'createNodeId')
       .mockReturnValue('node_created_root');
-    const createNoteIdSpy = vi
-      .spyOn(graphUtils, 'createNoteId')
-      .mockReturnValue('note_created_root');
 
     render(<App />);
 
@@ -339,7 +333,6 @@ describe('App', () => {
 
     createGraphIdSpy.mockRestore();
     createNodeIdSpy.mockRestore();
-    createNoteIdSpy.mockRestore();
   });
 
   it('enters another graph from a jump node button', async () => {
@@ -349,9 +342,6 @@ describe('App', () => {
     const createNodeIdSpy = vi
       .spyOn(graphUtils, 'createNodeId')
       .mockReturnValue('node_created_root');
-    const createNoteIdSpy = vi
-      .spyOn(graphUtils, 'createNoteId')
-      .mockReturnValue('note_created_root');
 
     render(<App />);
 
@@ -375,7 +365,6 @@ describe('App', () => {
 
     createGraphIdSpy.mockRestore();
     createNodeIdSpy.mockRestore();
-    createNoteIdSpy.mockRestore();
   });
 
   it('clears jump targets when deleting a referenced graph', async () => {
@@ -385,9 +374,6 @@ describe('App', () => {
     const createNodeIdSpy = vi
       .spyOn(graphUtils, 'createNodeId')
       .mockReturnValue('node_created_root');
-    const createNoteIdSpy = vi
-      .spyOn(graphUtils, 'createNoteId')
-      .mockReturnValue('note_created_root');
 
     render(<App />);
 
@@ -414,27 +400,24 @@ describe('App', () => {
 
     createGraphIdSpy.mockRestore();
     createNodeIdSpy.mockRestore();
-    createNoteIdSpy.mockRestore();
   });
 
-  it('creates a new node and renders the default markdown', () => {
+  it('creates a new node without creating markdown', () => {
     const createNodeIdSpy = vi
       .spyOn(graphUtils, 'createNodeId')
       .mockReturnValue('node_created');
-    const createNoteIdSpy = vi
-      .spyOn(graphUtils, 'createNoteId')
-      .mockReturnValue('note_created');
 
     render(<App />);
+    const markdownItemCount = getMarkdownList().getAllByRole('option').length;
 
     fireEvent.click(screen.getByRole('button', { name: '新建节点' }));
     fireEvent.click(getFlowNodeByLabel('Untitled'));
 
     expect(screen.getAllByText('Untitled').length).toBeGreaterThan(0);
-    expect(screen.getByText('在这里写内容。')).toBeInTheDocument();
+    expect(screen.getByText('当前节点还没有关联 markdown。')).toBeInTheDocument();
+    expect(getMarkdownList().getAllByRole('option')).toHaveLength(markdownItemCount);
 
     createNodeIdSpy.mockRestore();
-    createNoteIdSpy.mockRestore();
   });
 
   it('creates sibling, child, and delete actions from canvas keyboard shortcuts', async () => {
@@ -442,10 +425,6 @@ describe('App', () => {
       .spyOn(graphUtils, 'createNodeId')
       .mockReturnValueOnce('node_child')
       .mockReturnValueOnce('node_sibling');
-    const createNoteIdSpy = vi
-      .spyOn(graphUtils, 'createNoteId')
-      .mockReturnValueOnce('note_child')
-      .mockReturnValueOnce('note_sibling');
 
     render(<App />);
 
@@ -489,19 +468,21 @@ describe('App', () => {
     expect(getMarkdownList().getByText('React Flow')).toBeInTheDocument();
 
     createNodeIdSpy.mockRestore();
-    createNoteIdSpy.mockRestore();
   });
 
   it('renames and deletes markdowns manually from the toolbar', async () => {
-    promptSpy.mockReturnValue('Renamed Markdown');
-
     render(<App />);
 
-    fireEvent.click(getMarkdownItem('Knowledge Graph'));
-    fireEvent.click(screen.getByRole('button', { name: '重命名当前 Markdown' }));
+    fireEvent.doubleClick(getMarkdownItem('Knowledge Graph'));
+    const inlineEditor = await screen.findByLabelText('重命名 Markdown', {
+      selector: 'input',
+    });
+    fireEvent.change(inlineEditor, { target: { value: 'Renamed Markdown' } });
+    fireEvent.keyDown(inlineEditor, { key: 'Enter' });
 
     expect(getMarkdownList().getByText('Renamed Markdown')).toBeInTheDocument();
 
+    fireEvent.click(getMarkdownItem('Renamed Markdown'));
     fireEvent.click(screen.getByRole('button', { name: '删除当前 Markdown' }));
     expect(confirmSpy).toHaveBeenCalled();
 

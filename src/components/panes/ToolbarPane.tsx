@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { LayoutMode } from '../../types/layout';
 import type { GraphId, NoteId, WorkspaceDataMode } from '../../types/graph';
@@ -36,6 +36,8 @@ type ToolbarPaneProps = {
   info: ToolbarInfo;
   graphItems: GraphListItem[];
   markdownItems: MarkdownListItem[];
+  editingGraphId: GraphId | null;
+  editingMarkdownId: NoteId | null;
   canDeleteCurrentGraph: boolean;
   canDeleteSelectedNode: boolean;
   canConvertSelectedNodeToJump: boolean;
@@ -43,8 +45,9 @@ type ToolbarPaneProps = {
   canRenameActiveMarkdown: boolean;
   canDeleteActiveMarkdown: boolean;
   onSelectGraph: (graphId: GraphId) => void;
+  onStartGraphRename: (graphId: GraphId | null) => void;
+  onCommitGraphRename: (graphId: GraphId, title: string) => void;
   onCreateGraph: () => void;
-  onRenameCurrentGraph: () => void;
   onDeleteCurrentGraph: () => void;
   onCreateNode: () => void;
   onDeleteSelectedNode: () => void;
@@ -54,8 +57,9 @@ type ToolbarPaneProps = {
   onExportWorkspace: () => void;
   onImportData: (file: File) => void;
   onSelectMarkdown: (noteId: NoteId) => void;
+  onStartMarkdownRename: (noteId: NoteId | null) => void;
+  onCommitMarkdownRename: (noteId: NoteId, title: string) => void;
   onCreateMarkdown: () => void;
-  onRenameActiveMarkdown: () => void;
   onDeleteActiveMarkdown: () => void;
   selectedJumpTargetGraphId: GraphId | null;
   availableJumpTargetGraphs: Array<{ id: GraphId; title: string }>;
@@ -86,6 +90,8 @@ export function ToolbarPane({
   info,
   graphItems,
   markdownItems,
+  editingGraphId,
+  editingMarkdownId,
   canDeleteCurrentGraph,
   canDeleteSelectedNode,
   canConvertSelectedNodeToJump,
@@ -93,8 +99,9 @@ export function ToolbarPane({
   canRenameActiveMarkdown,
   canDeleteActiveMarkdown,
   onSelectGraph,
+  onStartGraphRename,
+  onCommitGraphRename,
   onCreateGraph,
-  onRenameCurrentGraph,
   onDeleteCurrentGraph,
   onCreateNode,
   onDeleteSelectedNode,
@@ -104,8 +111,9 @@ export function ToolbarPane({
   onExportWorkspace,
   onImportData,
   onSelectMarkdown,
+  onStartMarkdownRename,
+  onCommitMarkdownRename,
   onCreateMarkdown,
-  onRenameActiveMarkdown,
   onDeleteActiveMarkdown,
   selectedJumpTargetGraphId,
   availableJumpTargetGraphs,
@@ -120,6 +128,30 @@ export function ToolbarPane({
 }: ToolbarPaneProps) {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const [isInfoSectionExpanded, setIsInfoSectionExpanded] = useState(!isMobile);
+  const [graphRenameDraft, setGraphRenameDraft] = useState('');
+  const [markdownRenameDraft, setMarkdownRenameDraft] = useState('');
+
+  const currentGraphItem =
+    graphItems.find((graphItem) => graphItem.isCurrent) ?? null;
+  const activeMarkdownItem =
+    markdownItems.find((markdownItem) => markdownItem.isActive) ?? null;
+
+  useEffect(() => {
+    if (editingGraphId && !graphItems.some((graphItem) => graphItem.id === editingGraphId)) {
+      onStartGraphRename(null);
+      setGraphRenameDraft('');
+    }
+  }, [editingGraphId, graphItems, onStartGraphRename]);
+
+  useEffect(() => {
+    if (
+      editingMarkdownId &&
+      !markdownItems.some((markdownItem) => markdownItem.id === editingMarkdownId)
+    ) {
+      onStartMarkdownRename(null);
+      setMarkdownRenameDraft('');
+    }
+  }, [editingMarkdownId, markdownItems, onStartMarkdownRename]);
 
   function handleListItemKeyDown(
     event: KeyboardEvent<HTMLElement>,
@@ -131,6 +163,24 @@ export function ToolbarPane({
 
     event.preventDefault();
     action();
+  }
+
+  function startGraphRename(graphId: GraphId, title: string) {
+    if (isReadOnly) {
+      return;
+    }
+
+    onStartGraphRename(graphId);
+    setGraphRenameDraft(title);
+  }
+
+  function startMarkdownRename(noteId: NoteId, title: string) {
+    if (isReadOnly) {
+      return;
+    }
+
+    onStartMarkdownRename(noteId);
+    setMarkdownRenameDraft(title);
   }
 
   return (
@@ -369,7 +419,11 @@ export function ToolbarPane({
                 aria-label="重命名当前 Markdown"
                 className="icon-action-button"
                 disabled={!canRenameActiveMarkdown}
-                onClick={onRenameActiveMarkdown}
+                onClick={() => {
+                  if (activeMarkdownItem) {
+                    startMarkdownRename(activeMarkdownItem.id, activeMarkdownItem.title);
+                  }
+                }}
                 title="重命名当前 Markdown"
                 type="button"
               >
@@ -423,6 +477,9 @@ export function ToolbarPane({
                 data-linked={markdownItem.isLinkedToSelectedNode}
                 key={markdownItem.id}
                 onClick={() => onSelectMarkdown(markdownItem.id)}
+                onDoubleClick={() =>
+                  startMarkdownRename(markdownItem.id, markdownItem.title)
+                }
                 onKeyDown={(event) =>
                   handleListItemKeyDown(event, () => onSelectMarkdown(markdownItem.id))
                 }
@@ -430,7 +487,37 @@ export function ToolbarPane({
                 tabIndex={0}
               >
                 <span className="graph-list__body">
-                  <span className="graph-list__title">{markdownItem.title}</span>
+                  {editingMarkdownId === markdownItem.id ? (
+                    <input
+                      autoFocus
+                      aria-label="重命名 Markdown"
+                      className="graph-list__rename-input"
+                      onBlur={() => {
+                        onCommitMarkdownRename(markdownItem.id, markdownRenameDraft);
+                      }}
+                      onChange={(event) => setMarkdownRenameDraft(event.target.value)}
+                      onClick={(event) => event.stopPropagation()}
+                      onDoubleClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onCommitMarkdownRename(markdownItem.id, markdownRenameDraft);
+                        }
+
+                        if (event.key === 'Escape') {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onStartMarkdownRename(null);
+                          setMarkdownRenameDraft('');
+                        }
+                      }}
+                      type="text"
+                      value={markdownRenameDraft}
+                    />
+                  ) : (
+                    <span className="graph-list__title">{markdownItem.title}</span>
+                  )}
                   <span className="graph-list__meta">
                     {markdownItem.isLinkedToSelectedNode ? '已关联 · ' : ''}
                     {markdownItem.usageCount} 个节点
@@ -474,7 +561,11 @@ export function ToolbarPane({
               <button
                 aria-label="重命名当前 Graph"
                 className="icon-action-button"
-                onClick={onRenameCurrentGraph}
+                onClick={() => {
+                  if (currentGraphItem) {
+                    startGraphRename(currentGraphItem.id, currentGraphItem.title);
+                  }
+                }}
                 title="重命名当前 Graph"
                 type="button"
               >
@@ -527,6 +618,7 @@ export function ToolbarPane({
                 data-active={graphItem.isCurrent}
                 key={graphItem.id}
                 onClick={() => onSelectGraph(graphItem.id)}
+                onDoubleClick={() => startGraphRename(graphItem.id, graphItem.title)}
                 onKeyDown={(event) =>
                   handleListItemKeyDown(event, () => onSelectGraph(graphItem.id))
                 }
@@ -534,7 +626,37 @@ export function ToolbarPane({
                 tabIndex={0}
               >
                 <span className="graph-list__body">
-                  <span className="graph-list__title">{graphItem.title}</span>
+                  {editingGraphId === graphItem.id ? (
+                    <input
+                      autoFocus
+                      aria-label="重命名 Graph"
+                      className="graph-list__rename-input"
+                      onBlur={() => {
+                        onCommitGraphRename(graphItem.id, graphRenameDraft);
+                      }}
+                      onChange={(event) => setGraphRenameDraft(event.target.value)}
+                      onClick={(event) => event.stopPropagation()}
+                      onDoubleClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onCommitGraphRename(graphItem.id, graphRenameDraft);
+                        }
+
+                        if (event.key === 'Escape') {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onStartGraphRename(null);
+                          setGraphRenameDraft('');
+                        }
+                      }}
+                      type="text"
+                      value={graphRenameDraft}
+                    />
+                  ) : (
+                    <span className="graph-list__title">{graphItem.title}</span>
+                  )}
                   <span className="graph-list__meta">
                     {graphItem.incomingReferenceCount} 个引用
                   </span>

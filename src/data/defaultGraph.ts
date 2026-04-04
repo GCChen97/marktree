@@ -164,7 +164,6 @@ export function createNewGraphDocument(
   graphId: GraphId,
   title: string,
   rootNodeId: string,
-  rootNoteId: NoteId,
 ): GraphDocument {
   return {
     id: graphId,
@@ -175,7 +174,7 @@ export function createNewGraphDocument(
         position: { x: 220, y: 160 },
         data: {
           title: 'Start',
-          noteId: rootNoteId,
+          noteId: null,
           kind: 'default',
         },
       },

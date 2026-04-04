@@ -11,25 +11,12 @@
     {
       "id": "node_1775275450264_2",
       "position": {
-        "x": -92.14918369368593,
-        "y": 13.401794495962172
+        "x": -92.84655552686114,
+        "y": 108.24436380778977
       },
       "data": {
         "title": "RL",
-        "noteId": null,
-        "kind": "default"
-      },
-      "type": "mind"
-    },
-    {
-      "id": "node_1775301751403_1",
-      "position": {
-        "x": 161.02827258259526,
-        "y": -72.49595982093113
-      },
-      "data": {
-        "title": "log derivative trick",
-        "noteId": null,
+        "noteId": "note_1775317156295_1",
         "kind": "default"
       },
       "type": "mind"
@@ -62,11 +49,6 @@
     }
   ],
   "edges": [
-    {
-      "id": "edge_node_1775275450264_2_default-source_node_1775301751403_1_default-target_1775301751403",
-      "source": "node_1775275450264_2",
-      "target": "node_1775301751403_1"
-    },
     {
       "id": "edge_node_1775275450264_2_default-source_node_1775301767503_2_default-target_1775301767503",
       "source": "node_1775275450264_2",

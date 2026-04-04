@@ -6,6 +6,8 @@ import type {
   ExportedGraphData,
   ExportedWorkspaceData,
   GraphDocument,
+  GraphConnectionOrientation,
+  GraphEdgeStyle,
   GraphId,
   GraphReferenceIndex,
   GraphReferenceRecord,
@@ -26,6 +28,20 @@ export const DEFAULT_NEW_NODE_POSITION = {
 export const DEFAULT_NEW_NODE_TITLE = 'Untitled';
 export const DEFAULT_NEW_GRAPH_TITLE = 'Untitled Graph';
 export const DEFAULT_NEW_MARKDOWN_TITLE = 'Untitled';
+
+function normalizeConnectionOrientation(
+  orientation: unknown,
+): GraphConnectionOrientation {
+  return orientation === 'vertical' ? 'vertical' : 'horizontal';
+}
+
+function normalizeEdgeStyle(style: unknown): GraphEdgeStyle | undefined {
+  if (style === 'curved' || style === 'elbow') {
+    return style;
+  }
+
+  return undefined;
+}
 
 let nodeCounter = 0;
 let graphCounter = 0;
@@ -210,6 +226,12 @@ function isValidGraphDocument(graph: unknown): graph is GraphDocument {
   return (
     typeof graph.id === 'string' &&
     typeof graph.title === 'string' &&
+    (graph.connectionOrientation === undefined ||
+      graph.connectionOrientation === 'horizontal' ||
+      graph.connectionOrientation === 'vertical') &&
+    (graph.edgeStyle === undefined ||
+      graph.edgeStyle === 'curved' ||
+      graph.edgeStyle === 'elbow') &&
     Array.isArray(graph.nodes) &&
     graph.nodes.every(isValidNode) &&
     Array.isArray(graph.edges) &&
@@ -221,6 +243,10 @@ function sanitizeGraphDocument(graph: GraphDocument): GraphDocument {
   return {
     id: graph.id,
     title: graph.title,
+    connectionOrientation: normalizeConnectionOrientation(
+      graph.connectionOrientation,
+    ),
+    edgeStyle: normalizeEdgeStyle(graph.edgeStyle),
     nodes: graph.nodes.map((node) => ({
       ...node,
       type: node.data.kind === 'jump' ? 'jump' : 'mind',
@@ -228,6 +254,7 @@ function sanitizeGraphDocument(graph: GraphDocument): GraphDocument {
         title: node.data.title,
         noteId: node.data.noteId ?? null,
         kind: node.data.kind ?? 'default',
+        connectionOrientation: undefined,
         jumpLink:
           node.data.kind === 'jump' || node.data.jumpLink
             ? {

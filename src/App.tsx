@@ -16,6 +16,8 @@ import { useThemePreference } from './hooks/useThemePreference';
 import type {
   CanvasViewportApi,
   GraphDocument,
+  GraphConnectionOrientation,
+  GraphEdgeStyle,
   GraphId,
   GraphReferenceRecord,
   KnowledgeEdge,
@@ -123,6 +125,12 @@ function setGraphSelectedNodes(graph: GraphDocument, nodeIds: string[]) {
 
 function clearGraphSelectedNodes(graph: GraphDocument) {
   return setGraphSelectedNodes(graph, []);
+}
+
+function getDefaultEdgeStyle(
+  orientation: GraphConnectionOrientation,
+): GraphEdgeStyle {
+  return orientation === 'vertical' ? 'elbow' : 'curved';
 }
 
 function App() {
@@ -246,6 +254,10 @@ function App() {
     selectedNode?.data.kind === 'jump'
       ? selectedNode.data.jumpLink?.targetGraphId ?? null
       : null;
+  const currentConnectionOrientation: GraphConnectionOrientation =
+    currentGraph?.connectionOrientation ?? 'horizontal';
+  const currentEdgeStyle: GraphEdgeStyle =
+    currentGraph?.edgeStyle ?? getDefaultEdgeStyle(currentConnectionOrientation);
 
   const applyWorkspaceMutation = useCallback(
     (
@@ -922,6 +934,58 @@ function App() {
     });
   }
 
+  function handleToggleConnectionOrientation(
+    nextOrientation: GraphConnectionOrientation,
+  ) {
+    if (isReadOnly || !currentGraph) {
+      return;
+    }
+
+    applyWorkspaceMutation((currentWorkspace) => {
+      const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+      if (!graph) {
+        return currentWorkspace;
+      }
+
+      return {
+        ...currentWorkspace,
+        graphs: {
+          ...currentWorkspace.graphs,
+          [graph.id]: {
+            ...graph,
+            connectionOrientation: nextOrientation,
+          },
+        },
+      };
+    });
+  }
+
+  function handleToggleEdgeStyle(nextEdgeStyle: GraphEdgeStyle) {
+    if (isReadOnly || !currentGraph) {
+      return;
+    }
+
+    applyWorkspaceMutation((currentWorkspace) => {
+      const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+      if (!graph) {
+        return currentWorkspace;
+      }
+
+      return {
+        ...currentWorkspace,
+        graphs: {
+          ...currentWorkspace.graphs,
+          [graph.id]: {
+            ...graph,
+            edgeStyle: nextEdgeStyle,
+          },
+        },
+      };
+    });
+  }
+
   function handleEnterLinkedGraph(targetGraphId: GraphId) {
     if (!workspaceState.graphs[targetGraphId]) {
       return;
@@ -1234,13 +1298,19 @@ function App() {
       onThemeToggle={toggleTheme}
       onUnsetSelectedJumpNode={handleUnsetSelectedJumpNode}
       selectedJumpTargetGraphId={selectedJumpTargetGraphId}
+      connectionOrientation={currentConnectionOrientation}
+      edgeStyle={currentEdgeStyle}
       theme={theme}
+      onToggleEdgeStyle={handleToggleEdgeStyle}
+      onToggleConnectionOrientation={handleToggleConnectionOrientation}
     />
   );
 
   const canvasPane = (
     <CanvasPane
       canCenterSelected={Boolean(selectedNode)}
+      connectionOrientation={currentConnectionOrientation}
+      edgeStyle={currentEdgeStyle}
       currentGraphId={currentGraph.id}
       editingNodeId={editingNodeId}
       edges={currentGraph.edges}

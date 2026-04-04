@@ -18,12 +18,16 @@ import type {
 import { MindNode } from '../canvas/MindNode';
 import type {
   CanvasViewportApi,
+  GraphConnectionOrientation,
+  GraphEdgeStyle,
   GraphId,
   KnowledgeEdge,
   KnowledgeNode,
 } from '../../types/graph';
 
 type CanvasPaneProps = {
+  connectionOrientation: GraphConnectionOrientation;
+  edgeStyle: GraphEdgeStyle;
   currentGraphId: GraphId;
   nodes: KnowledgeNode[];
   edges: KnowledgeEdge[];
@@ -123,6 +127,8 @@ const nodeTypes: NodeTypes = {
 };
 
 export function CanvasPane({
+  connectionOrientation,
+  edgeStyle,
   currentGraphId,
   nodes,
   edges,
@@ -149,6 +155,10 @@ export function CanvasPane({
 }: CanvasPaneProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const previousEditingNodeIdRef = useRef<string | null>(null);
+  const sourcePosition =
+    connectionOrientation === 'vertical' ? Position.Bottom : Position.Right;
+  const targetPosition =
+    connectionOrientation === 'vertical' ? Position.Top : Position.Left;
 
   useLayoutEffect(() => {
     if (!editingNodeId) {
@@ -194,11 +204,12 @@ export function CanvasPane({
             onCommitTitleEdit: isReadOnly ? null : onCommitNodeTitleEdit,
             onCancelTitleEdit: isReadOnly ? null : onCancelNodeTitleEdit,
             onEnterLinkedGraph,
+            connectionOrientation,
           },
           selected: Boolean(node.selected),
           draggable: !isReadOnly,
-          sourcePosition: node.sourcePosition ?? Position.Right,
-          targetPosition: node.targetPosition ?? Position.Left,
+          sourcePosition,
+          targetPosition,
           ...(node.data.kind === 'jump' && targetGraphId === currentGraphId
             ? {
                 data: {
@@ -209,6 +220,7 @@ export function CanvasPane({
                   onCommitTitleEdit: isReadOnly ? null : onCommitNodeTitleEdit,
                   onCancelTitleEdit: isReadOnly ? null : onCancelNodeTitleEdit,
                   onEnterLinkedGraph,
+                  connectionOrientation,
                   targetGraphMissing: true,
                 },
               }
@@ -217,6 +229,7 @@ export function CanvasPane({
       }),
     [
       currentGraphId,
+      connectionOrientation,
       editingNodeId,
       isReadOnly,
       nodes,
@@ -225,6 +238,15 @@ export function CanvasPane({
       onEnterLinkedGraph,
       onStartNodeTitleEdit,
     ],
+  );
+
+  const displayEdges = useMemo(
+    () =>
+      edges.map((edge) => ({
+        ...edge,
+        type: edgeStyle === 'elbow' ? 'smoothstep' : undefined,
+      })),
+    [edgeStyle, edges],
   );
 
   const handleNodesChange: OnNodesChange<KnowledgeNode> = (changes) => {
@@ -393,7 +415,7 @@ export function CanvasPane({
         <ReactFlow<KnowledgeNode, KnowledgeEdge>
           className="graph-canvas"
           data-testid="react-flow-canvas"
-          edges={edges}
+          edges={displayEdges}
           fitView
           nodeTypes={nodeTypes}
           nodesFocusable

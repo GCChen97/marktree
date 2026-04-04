@@ -17,6 +17,8 @@ const flowPropMocks = vi.hoisted(() => ({
   panOnDrag: undefined as unknown,
   selectionOnDrag: undefined as unknown,
   lastOnNodesChange: undefined as unknown,
+  lastNodes: undefined as unknown,
+  lastEdges: undefined as unknown,
 }));
 
 vi.mock('@xyflow/react', async () => {
@@ -27,6 +29,8 @@ vi.mock('@xyflow/react', async () => {
     Position: {
       Left: 'left',
       Right: 'right',
+      Top: 'top',
+      Bottom: 'bottom',
     },
     SelectionMode: {
       Partial: 'partial',
@@ -35,6 +39,7 @@ vi.mock('@xyflow/react', async () => {
     ReactFlow: ({
       children,
       className,
+      edges,
       onConnect,
       onNodeClick,
       onPaneClick,
@@ -49,6 +54,7 @@ vi.mock('@xyflow/react', async () => {
       onNodeClick?: (_event: unknown, node: { id: string }) => void;
       onPaneClick?: () => void;
       nodes?: Array<{ id: string }>;
+      edges?: Array<{ id: string }>;
       onNodesChange?: unknown;
       panOnDrag?: unknown;
       selectionOnDrag?: unknown;
@@ -57,6 +63,8 @@ vi.mock('@xyflow/react', async () => {
         flowPropMocks.panOnDrag = panOnDrag;
         flowPropMocks.selectionOnDrag = selectionOnDrag;
         flowPropMocks.lastOnNodesChange = onNodesChange;
+        flowPropMocks.lastNodes = nodes;
+        flowPropMocks.lastEdges = edges;
 
         return createElement(
           'div',
@@ -120,6 +128,8 @@ describe('CanvasPane viewport bridge', () => {
     flowPropMocks.panOnDrag = undefined;
     flowPropMocks.selectionOnDrag = undefined;
     flowPropMocks.lastOnNodesChange = undefined;
+    flowPropMocks.lastNodes = undefined;
+    flowPropMocks.lastEdges = undefined;
     viewportMocks.screenToFlowPosition.mockImplementation(
       ({ x, y }: { x: number; y: number }) => ({
         x: x / 2,
@@ -156,6 +166,8 @@ describe('CanvasPane viewport bridge', () => {
     const { container } = render(
       <CanvasPane
         canCenterSelected
+        connectionOrientation="horizontal"
+        edgeStyle="curved"
         currentGraphId="graph_focus"
         editingNodeId="node_focus"
         edges={[]}
@@ -251,6 +263,8 @@ describe('CanvasPane viewport bridge', () => {
     render(
       <CanvasPane
         canCenterSelected={false}
+        connectionOrientation="horizontal"
+        edgeStyle="curved"
         currentGraphId="graph_focus"
         editingNodeId={null}
         edges={[]}
@@ -310,6 +324,8 @@ describe('CanvasPane viewport bridge', () => {
     render(
       <CanvasPane
         canCenterSelected={false}
+        connectionOrientation="horizontal"
+        edgeStyle="curved"
         currentGraphId="graph_focus"
         editingNodeId={null}
         edges={[]}
@@ -359,6 +375,8 @@ describe('CanvasPane viewport bridge', () => {
         <input aria-label="typing-target" />
         <CanvasPane
           canCenterSelected={false}
+          connectionOrientation="horizontal"
+          edgeStyle="curved"
           currentGraphId="graph_focus"
           editingNodeId={null}
           edges={[]}
@@ -422,6 +440,8 @@ describe('CanvasPane viewport bridge', () => {
     render(
       <CanvasPane
         canCenterSelected={false}
+        connectionOrientation="horizontal"
+        edgeStyle="curved"
         currentGraphId="graph_focus"
         editingNodeId={null}
         edges={[]}
@@ -467,6 +487,8 @@ describe('CanvasPane viewport bridge', () => {
     render(
       <CanvasPane
         canCenterSelected={false}
+        connectionOrientation="horizontal"
+        edgeStyle="curved"
         currentGraphId="graph_focus"
         editingNodeId={null}
         edges={[]}
@@ -509,6 +531,8 @@ describe('CanvasPane viewport bridge', () => {
     const { rerender } = render(
       <CanvasPane
         canCenterSelected
+        connectionOrientation="horizontal"
+        edgeStyle="curved"
         currentGraphId="graph_focus"
         editingNodeId={null}
         edges={[]}
@@ -538,6 +562,8 @@ describe('CanvasPane viewport bridge', () => {
     rerender(
       <CanvasPane
         canCenterSelected
+        connectionOrientation="horizontal"
+        edgeStyle="curved"
         currentGraphId="graph_focus"
         editingNodeId={null}
         edges={[]}
@@ -566,6 +592,129 @@ describe('CanvasPane viewport bridge', () => {
     expect(screen.getByTestId('graph-canvas-surface')).toHaveAttribute(
       'tabindex',
       '0',
+    );
+  });
+
+  it('switches node handles and edge routing when using vertical orientation', () => {
+    const node: KnowledgeNode = {
+      id: 'node_focus',
+      position: { x: 120, y: 80 },
+      data: {
+        title: 'Focus Node',
+        noteId: null,
+        kind: 'default',
+      },
+    };
+
+    render(
+      <CanvasPane
+        canCenterSelected={false}
+        connectionOrientation="vertical"
+        edgeStyle="elbow"
+        currentGraphId="graph_focus"
+        editingNodeId={null}
+        edges={[
+          {
+            id: 'edge_focus',
+            source: 'node_focus',
+            target: 'node_other',
+          },
+        ]}
+        isReadOnly={false}
+        nodes={[node]}
+        onCenterSelected={() => {}}
+        onCancelNodeTitleEdit={() => {}}
+        onCommitNodeTitleEdit={() => {}}
+        onConnectEdge={() => {}}
+        onCreateNode={() => {}}
+        onCreateChildNodeFromSelection={() => {}}
+        onCreateSiblingNodeFromSelection={() => {}}
+        onDeleteSelectedNodesByShortcut={() => {}}
+        onEdgesChange={() => {}}
+        onEnterLinkedGraph={() => {}}
+        onFitView={() => {}}
+        onNodesChange={() => {}}
+        onStartNodeTitleEdit={() => {}}
+        onViewportApiReady={() => {}}
+        onZoomIn={() => {}}
+        onZoomOut={() => {}}
+      />,
+    );
+
+    expect(flowPropMocks.lastNodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourcePosition: 'bottom',
+          targetPosition: 'top',
+          data: expect.objectContaining({
+            connectionOrientation: 'vertical',
+          }),
+        }),
+      ]),
+    );
+    expect(flowPropMocks.lastEdges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'edge_focus',
+          type: 'smoothstep',
+        }),
+      ]),
+    );
+  });
+
+  it('keeps curved edges when the graph edge style is set to curved', () => {
+    const node: KnowledgeNode = {
+      id: 'node_focus',
+      position: { x: 120, y: 80 },
+      data: {
+        title: 'Focus Node',
+        noteId: null,
+        kind: 'default',
+      },
+    };
+
+    render(
+      <CanvasPane
+        canCenterSelected={false}
+        connectionOrientation="vertical"
+        edgeStyle="curved"
+        currentGraphId="graph_focus"
+        editingNodeId={null}
+        edges={[
+          {
+            id: 'edge_focus',
+            source: 'node_focus',
+            target: 'node_other',
+          },
+        ]}
+        isReadOnly={false}
+        nodes={[node]}
+        onCenterSelected={() => {}}
+        onCancelNodeTitleEdit={() => {}}
+        onCommitNodeTitleEdit={() => {}}
+        onConnectEdge={() => {}}
+        onCreateNode={() => {}}
+        onCreateChildNodeFromSelection={() => {}}
+        onCreateSiblingNodeFromSelection={() => {}}
+        onDeleteSelectedNodesByShortcut={() => {}}
+        onEdgesChange={() => {}}
+        onEnterLinkedGraph={() => {}}
+        onFitView={() => {}}
+        onNodesChange={() => {}}
+        onStartNodeTitleEdit={() => {}}
+        onViewportApiReady={() => {}}
+        onZoomIn={() => {}}
+        onZoomOut={() => {}}
+      />,
+    );
+
+    expect(flowPropMocks.lastEdges).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'edge_focus',
+          type: undefined,
+        }),
+      ]),
     );
   });
 });

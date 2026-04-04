@@ -255,6 +255,76 @@ describe('App', () => {
     createNodeIdSpy.mockRestore();
   });
 
+  it('stores connection orientation per graph and restores it when switching graphs', async () => {
+    const createGraphIdSpy = vi
+      .spyOn(graphUtils, 'createGraphId')
+      .mockReturnValue('graph_created');
+    const createNodeIdSpy = vi
+      .spyOn(graphUtils, 'createNodeId')
+      .mockReturnValue('node_created_root');
+
+    render(<App />);
+
+    const orientationSwitch = screen.getByRole('switch', { name: '上下连接' });
+
+    expect(orientationSwitch).not.toBeChecked();
+
+    fireEvent.click(orientationSwitch);
+    expect(orientationSwitch).toBeChecked();
+
+    fireEvent.click(screen.getByRole('button', { name: '新建 Graph' }));
+
+    await waitFor(() => {
+      expect(getGraphItem('Untitled Graph')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('switch', { name: '上下连接' })).not.toBeChecked();
+
+    fireEvent.click(getGraphItem('Main Graph'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('switch', { name: '上下连接' })).toBeChecked();
+    });
+
+    createGraphIdSpy.mockRestore();
+    createNodeIdSpy.mockRestore();
+  });
+
+  it('stores edge style per graph and restores it when switching graphs', async () => {
+    const createGraphIdSpy = vi
+      .spyOn(graphUtils, 'createGraphId')
+      .mockReturnValue('graph_created');
+    const createNodeIdSpy = vi
+      .spyOn(graphUtils, 'createNodeId')
+      .mockReturnValue('node_created_root');
+
+    render(<App />);
+
+    const edgeStyleSwitch = screen.getByRole('switch', { name: '折线边' });
+
+    expect(edgeStyleSwitch).not.toBeChecked();
+
+    fireEvent.click(edgeStyleSwitch);
+    expect(edgeStyleSwitch).toBeChecked();
+
+    fireEvent.click(screen.getByRole('button', { name: '新建 Graph' }));
+
+    await waitFor(() => {
+      expect(getGraphItem('Untitled Graph')).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole('switch', { name: '折线边' })).not.toBeChecked();
+
+    fireEvent.click(getGraphItem('Main Graph'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('switch', { name: '折线边' })).toBeChecked();
+    });
+
+    createGraphIdSpy.mockRestore();
+    createNodeIdSpy.mockRestore();
+  });
+
   it('syncs selected node details to the toolbar and markdown pane', () => {
     render(<App />);
 

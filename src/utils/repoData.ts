@@ -1,6 +1,8 @@
 import { createDefaultWorkspaceState } from '../data/defaultGraph';
 import type {
   GraphDocument,
+  GraphConnectionOrientation,
+  GraphEdgeStyle,
   GraphId,
   KnowledgeEdge,
   KnowledgeNode,
@@ -18,6 +20,20 @@ const NOTES_DIRECTORY_NAME = 'notes';
 const MANIFEST_FILE_NAME = 'manifest.json';
 const DEFAULT_GRAPH_FILE_TITLE = 'Graph';
 const DEFAULT_NOTE_FILE_TITLE = 'Markdown';
+
+function normalizeConnectionOrientation(
+  orientation: unknown,
+): GraphConnectionOrientation {
+  return orientation === 'vertical' ? 'vertical' : 'horizontal';
+}
+
+function normalizeEdgeStyle(style: unknown): GraphEdgeStyle | undefined {
+  if (style === 'curved' || style === 'elbow') {
+    return style;
+  }
+
+  return undefined;
+}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -146,6 +162,10 @@ function sanitizeGraphDocument(graph: GraphDocument): GraphDocument {
   return {
     id: graph.id,
     title: graph.title,
+    connectionOrientation: normalizeConnectionOrientation(
+      graph.connectionOrientation,
+    ),
+    edgeStyle: normalizeEdgeStyle(graph.edgeStyle),
     nodes: graph.nodes.map(sanitizeNode),
     edges: graph.edges.map(sanitizeEdge),
   };
@@ -206,6 +226,12 @@ function parseGraphDocument(parsed: unknown): GraphDocument | null {
   if (
     typeof parsed.id !== 'string' ||
     typeof parsed.title !== 'string' ||
+    (parsed.connectionOrientation !== undefined &&
+      parsed.connectionOrientation !== 'horizontal' &&
+      parsed.connectionOrientation !== 'vertical') ||
+    (parsed.edgeStyle !== undefined &&
+      parsed.edgeStyle !== 'curved' &&
+      parsed.edgeStyle !== 'elbow') ||
     !Array.isArray(parsed.nodes) ||
     !Array.isArray(parsed.edges)
   ) {
@@ -244,6 +270,10 @@ function parseGraphDocument(parsed: unknown): GraphDocument | null {
   return {
     id: parsed.id,
     title: parsed.title,
+    connectionOrientation: normalizeConnectionOrientation(
+      parsed.connectionOrientation,
+    ),
+    edgeStyle: normalizeEdgeStyle(parsed.edgeStyle),
     nodes: nodes.map(sanitizeNode),
     edges: edges.map(sanitizeEdge),
   };

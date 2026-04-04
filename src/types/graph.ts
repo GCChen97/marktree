@@ -2,6 +2,8 @@ import type { Connection, Edge, Node } from '@xyflow/react';
 
 export type GraphId = string;
 export type NoteId = string;
+export type GraphConnectionOrientation = 'horizontal' | 'vertical';
+export type GraphEdgeStyle = 'curved' | 'elbow';
 
 export type JumpLinkData = {
   targetGraphId: GraphId | null;
@@ -12,6 +14,7 @@ export type KnowledgeNodeData = {
   noteId: NoteId | null;
   kind?: 'default' | 'jump';
   jumpLink?: JumpLinkData;
+  connectionOrientation?: GraphConnectionOrientation;
   label?: string;
   targetGraphTitle?: string | null;
   targetGraphMissing?: boolean;
@@ -36,6 +39,8 @@ export type NoteRecord = {
 export type GraphDocument = {
   id: GraphId;
   title: string;
+  connectionOrientation?: GraphConnectionOrientation;
+  edgeStyle?: GraphEdgeStyle;
   nodes: KnowledgeNode[];
   edges: KnowledgeEdge[];
 };

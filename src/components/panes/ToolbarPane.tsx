@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import type { LayoutMode } from '../../types/layout';
-import type { GraphId, NoteId, WorkspaceDataMode } from '../../types/graph';
+import type {
+  GraphConnectionOrientation,
+  GraphEdgeStyle,
+  GraphId,
+  NoteId,
+  WorkspaceDataMode,
+} from '../../types/graph';
 import type { ThemeMode } from '../../types/theme';
 
 type ToolbarInfo = {
@@ -64,6 +70,12 @@ type ToolbarPaneProps = {
   selectedJumpTargetGraphId: GraphId | null;
   availableJumpTargetGraphs: Array<{ id: GraphId; title: string }>;
   onSetSelectedJumpTargetGraph: (graphId: GraphId | null) => void;
+  connectionOrientation: GraphConnectionOrientation;
+  edgeStyle: GraphEdgeStyle;
+  onToggleConnectionOrientation: (
+    next: GraphConnectionOrientation,
+  ) => void;
+  onToggleEdgeStyle: (next: GraphEdgeStyle) => void;
   canSaveDataFiles: boolean;
   directoryName: string | null;
   directoryError: string | null;
@@ -118,6 +130,10 @@ export function ToolbarPane({
   selectedJumpTargetGraphId,
   availableJumpTargetGraphs,
   onSetSelectedJumpTargetGraph,
+  connectionOrientation,
+  edgeStyle,
+  onToggleConnectionOrientation,
+  onToggleEdgeStyle,
   canSaveDataFiles,
   directoryName,
   directoryError,
@@ -135,6 +151,9 @@ export function ToolbarPane({
     graphItems.find((graphItem) => graphItem.isCurrent) ?? null;
   const activeMarkdownItem =
     markdownItems.find((markdownItem) => markdownItem.isActive) ?? null;
+  const connectionOrientationLabel =
+    connectionOrientation === 'vertical' ? '上下连接' : '左右连接';
+  const edgeStyleLabel = edgeStyle === 'elbow' ? '折线边' : '曲线边';
 
   useEffect(() => {
     if (editingGraphId && !graphItems.some((graphItem) => graphItem.id === editingGraphId)) {
@@ -259,8 +278,58 @@ export function ToolbarPane({
             onClick={onDeleteSelectedNode}
             type="button"
           >
-            删除选中节点
+            删除节点
           </button>
+        </div>
+        <div className="toolbar-jump-config toolbar-jump-config--stacked">
+          <div className="toolbar-inline-switches">
+          <label
+            className="toolbar-switch toolbar-switch--compact"
+            htmlFor="connection-orientation-toggle"
+          >
+            <input
+              aria-label="上下连接"
+              checked={connectionOrientation === 'vertical'}
+              className="toolbar-switch__input"
+              disabled={isReadOnly}
+              id="connection-orientation-toggle"
+              onChange={(event) =>
+                onToggleConnectionOrientation(
+                  event.target.checked ? 'vertical' : 'horizontal',
+                )
+              }
+              role="switch"
+              type="checkbox"
+            />
+            <span aria-hidden="true" className="toolbar-switch__track">
+              <span className="toolbar-switch__thumb" />
+            </span>
+            <span className="toolbar-switch__label">
+              {connectionOrientationLabel}
+            </span>
+          </label>
+          <label
+            className="toolbar-switch toolbar-switch--compact"
+            htmlFor="edge-style-toggle"
+          >
+            <input
+              aria-label="折线边"
+              checked={edgeStyle === 'elbow'}
+              className="toolbar-switch__input"
+              disabled={isReadOnly}
+              id="edge-style-toggle"
+              onChange={(event) =>
+                onToggleEdgeStyle(event.target.checked ? 'elbow' : 'curved')
+              }
+              role="switch"
+              type="checkbox"
+            />
+            <span aria-hidden="true" className="toolbar-switch__track">
+              <span className="toolbar-switch__thumb" />
+            </span>
+            <span className="toolbar-switch__label">{edgeStyleLabel}</span>
+          </label>
+          </div>
         </div>
         <div className="toolbar-jump-config">
           <label className="toolbar-switch toolbar-switch--compact" htmlFor="jump-node-toggle-inline">

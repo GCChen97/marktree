@@ -7,6 +7,11 @@ export function MindNode({ id, data }: NodeProps<KnowledgeNode>) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const targetGraphId = data.jumpLink?.targetGraphId ?? null;
   const isJumpNode = data.kind === 'jump';
+  const connectionOrientation = data.connectionOrientation ?? 'horizontal';
+  const targetHandlePosition =
+    connectionOrientation === 'vertical' ? Position.Top : Position.Left;
+  const sourceHandlePosition =
+    connectionOrientation === 'vertical' ? Position.Bottom : Position.Right;
 
   useEffect(() => {
     setDraftTitle(data.title);
@@ -34,7 +39,11 @@ export function MindNode({ id, data }: NodeProps<KnowledgeNode>) {
 
   return (
     <div className={`mind-node${isJumpNode ? ' mind-node--jump' : ''}`}>
-      <Handle className="mind-node__handle" position={Position.Left} type="target" />
+      <Handle
+        className="mind-node__handle"
+        position={targetHandlePosition}
+        type="target"
+      />
       <div className="mind-node__header">
         {data.isEditingTitle ? (
           <input
@@ -100,7 +109,11 @@ export function MindNode({ id, data }: NodeProps<KnowledgeNode>) {
           </div>
         </div>
       ) : null}
-      <Handle className="mind-node__handle" position={Position.Right} type="source" />
+      <Handle
+        className="mind-node__handle"
+        position={sourceHandlePosition}
+        type="source"
+      />
     </div>
   );
 }

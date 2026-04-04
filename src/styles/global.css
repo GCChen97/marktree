@@ -417,6 +417,18 @@ button {
   margin-top: var(--space-2);
 }
 
+.toolbar-jump-config--stacked {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+}
+
+.toolbar-inline-switches {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
 .toolbar-switch {
   display: inline-flex;
   align-items: center;

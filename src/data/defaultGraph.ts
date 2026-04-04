@@ -12,6 +12,8 @@ export function createDefaultGraphDocument(): GraphDocument {
   return {
     id: DEFAULT_WORKSPACE_GRAPH_ID,
     title: 'Main Graph',
+    connectionOrientation: 'horizontal',
+    edgeStyle: 'curved',
     nodes: [
       {
         id: 'node_graph',
@@ -168,6 +170,8 @@ export function createNewGraphDocument(
   return {
     id: graphId,
     title,
+    connectionOrientation: 'horizontal',
+    edgeStyle: 'curved',
     nodes: [
       {
         id: rootNodeId,

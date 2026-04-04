@@ -1,21 +1,49 @@
 # MyMind
 
-本项目当前已完成桌面端核心功能、基础移动端适配，以及多 graph 工作区的第一版能力，使用 `Vite + React + TypeScript` 搭建。
+一个基于 `Vite + React + TypeScript + React Flow` 的知识图谱工作区。
 
-当前已具备：
+当前这版已经支持：
 
 - 三栏桌面布局，支持宽度拖拽和 `ABC / ACB / CBA / BCA` 四种固定布局
-- 多 graph 工作区，支持 graph 列表切换、新建、重命名、删除
-- Graph 管理区为紧凑列表，标题右侧提供单行图标操作按钮
-- 中间 `React Flow` 画布，支持节点拖拽、连线创建、缩放、平移和选中
-- 支持普通节点与跳转节点，跳转节点可进入目标 graph
+- `900px` 以下自动切换为移动端单栏分页布局
+- 多 graph 工作区：切换、新建、重命名、删除 graph
+- 中间 `React Flow` 画布：节点拖拽、连线创建、框选、多选删除、缩放、平移、居中
+- 画布快捷键：
+  - `a` 新建孤立节点
+  - `Enter` 新建同级节点
+  - `Shift+Enter` 新建子节点
+  - `x` / `Delete` 删除当前选中节点
+- 双击节点可直接编辑节点名称
+- 跳转节点：可配置目标 graph，并从节点内按钮进入目标 graph
 - 右侧只读 Markdown 面板，支持 GFM 与 LaTeX
-- 左侧工具栏支持节点标题编辑、新建节点、删除选中节点、跳转节点配置，以及当前 Graph / Workspace 的导入导出
-- 画布右上角提供紧凑视图工具条：`Fit View`、`Zoom In`、`Zoom Out`、`Center Selected`
-- 支持导出当前 Graph、导出整个 Workspace、导入 JSON
-- 工作区数据会自动保存到 `localStorage`，刷新后恢复 graphs、节点、边、note 内容和节点位置
-- `900px` 以下自动切换为移动端单栏分页布局，底部可切换工具栏 / 画布 / 详情
-- 工具栏顶部提供紧凑的白天 / 夜晚主题切换
+- Markdown 管理与节点关联：网页可管理 markdown 元数据，正文继续由外部编辑器维护
+- 画布右上角视图工具条：`Fit View`、`Zoom In`、`Zoom Out`、`Center Selected`
+- 图谱操作区支持 graph 级连接设置：
+  - `左右连接 / 上下连接`
+  - `曲线边 / 折线边`
+- 仓库数据直接来自 `public/data`
+  - `manifest.json`
+  - `graphs/*.json`
+  - `notes/*.md`
+- 本地开发时可选择 `public/data` 目录，把 graph 改动直接写回仓库文件
+- GitHub Pages 部署模式下自动切换为只读浏览
+
+## 数据目录
+
+业务数据固定放在：
+
+```text
+public/data/
+  manifest.json
+  graphs/
+  notes/
+```
+
+其中：
+
+- `graphs/*.json` 保存 graph 结构
+- `notes/*.md` 保存 markdown 正文
+- `manifest.json` 保存 graph / note 的索引、顺序和文件映射
 
 ## 在本地查看网页
 
@@ -31,29 +59,41 @@ npm install
 npm run dev
 ```
 
-启动后，终端会输出一个本地地址，通常类似：
+启动后，在浏览器打开终端输出的本地地址，通常类似：
 
 ```text
 http://localhost:5173/
 ```
 
-在浏览器里打开这个地址，就可以查看当前网页。
+## 本地作者模式
+
+如果你希望网页里的 graph 改动直接写回仓库文件：
+
+1. 用 `npm run dev` 启动项目
+2. 打开网页
+3. 在左侧 `文件` 区点击 `选择目录`
+4. 选择仓库里的 `public/data` 目录
+
+之后 graph 相关修改会自动写回：
+
+- `public/data/manifest.json`
+- `public/data/graphs/*.json`
+
+Markdown 正文 `.md` 文件不在网页里编辑，继续用你自己的编辑器维护；改完后刷新页面即可看到最新内容。
 
 ## 预览打包后的页面
-
-如果你想先构建再本地预览，可以运行：
 
 ```bash
 npm run build
 npm run preview
 ```
 
-`preview` 启动后也会在终端输出一个本地访问地址。
+`preview` 启动后也会输出一个本地地址。这个模式更接近 GitHub Pages，页面会直接读取构建产物里的 `data/*` 静态文件。
 
-## 其他常用命令
+## 常用命令
 
 ```bash
 npm test
 ```
 
-用于运行当前测试用例。
+运行当前测试。

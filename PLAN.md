@@ -34,9 +34,9 @@
   * `Shift+Enter` 新建子节点
   * `x / Delete` 删除当前选中节点
 * 所有“新建节点”入口都可直接进入节点名称编辑
-* 节点选中后，左侧信息区和右侧标题区会同步联动
+* 节点选中后，左侧信息区和右侧标题区会同步联动；同时也支持通过工具栏 Markdown 列表项直接切换右侧内容
 * 已接入 `react-markdown + remark-gfm + remark-math + rehype-katex + katex`
-* 右侧已支持只读 Markdown 渲染，包含 GFM 表格、任务列表、代码块和 LaTeX 公式
+* 右侧已支持只读 Markdown 渲染，包含 GFM 表格、任务列表、代码块和 LaTeX 公式；Markdown 列表项点击即可切换右侧内容
 * 左侧已支持 `新建节点 / 删除节点 / 跳转节点开关 / 目标 graph 选择`
 * 画布右上角已提供紧凑视图工具条：`Fit View / Zoom In / Zoom Out / Center Selected`
 * 左侧已支持 `导出当前 Graph / 导出整个 Workspace / 导入 JSON`

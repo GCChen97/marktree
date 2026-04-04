@@ -15,7 +15,7 @@
   - `x` / `Delete` 删除当前选中节点
 - 双击节点可直接编辑节点名称
 - 跳转节点：可配置目标 graph，并从节点内按钮进入目标 graph
-- 右侧只读 Markdown 面板，支持 GFM 与 LaTeX
+- 右侧只读 Markdown 面板，支持 GFM 与 LaTeX；可通过点击节点或点击 Markdown 列表项切换内容
 - Markdown 管理与节点关联：网页可管理 markdown 元数据，正文继续由外部编辑器维护
 - 画布右上角视图工具条：`Fit View`、`Zoom In`、`Zoom Out`、`Center Selected`
 - 图谱操作区支持 graph 级连接设置：
@@ -80,6 +80,8 @@ http://localhost:5173/
 - `public/data/graphs/*.json`
 
 Markdown 正文 `.md` 文件不在网页里编辑，继续用你自己的编辑器维护；改完后刷新页面即可看到最新内容。
+
+在工具栏的 `Markdown` 列表里点击某一项，也会直接切换右侧 Markdown 面板，方便在不改动画布选中节点的情况下浏览不同笔记。
 
 ## 预览打包后的页面
 

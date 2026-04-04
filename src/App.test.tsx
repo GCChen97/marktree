@@ -532,6 +532,24 @@ describe('App', () => {
     });
   });
 
+  it('shows the clicked markdown item in the markdown pane', async () => {
+    render(<App />);
+
+    fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
+
+    expect(screen.getByText('note_graph')).toBeInTheDocument();
+
+    fireEvent.click(getMarkdownItem('React Flow'));
+
+    await waitFor(() => {
+      expect(screen.getByText('note_flow')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('React Flow 已经承担了当前画布交互。')).toBeInTheDocument();
+    expect(screen.getByText('当前选中')).toBeInTheDocument();
+    expect(screen.getAllByText('Knowledge Graph').length).toBeGreaterThan(0);
+  });
+
   it('creates a new node without creating markdown', () => {
     const createNodeIdSpy = vi
       .spyOn(graphUtils, 'createNodeId')

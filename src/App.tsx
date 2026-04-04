@@ -207,14 +207,14 @@ function App() {
   );
 
   const selectedNote = useMemo<NoteRecord | null>(() => {
-    const noteId = selectedNode?.data.noteId;
+    const noteId = activeMarkdownId ?? selectedNode?.data.noteId;
 
     if (!noteId) {
       return null;
     }
 
     return workspaceState.notes[noteId] ?? null;
-  }, [selectedNode, workspaceState.notes]);
+  }, [activeMarkdownId, selectedNode, workspaceState.notes]);
 
   const graphItems = useMemo(
     () =>
@@ -866,6 +866,9 @@ function App() {
     }
 
     const nodeIdsToDelete = new Set(selectedNodeIds);
+    const activeMarkdownShouldClear = currentGraph.nodes.some(
+      (node) => nodeIdsToDelete.has(node.id) && node.data.noteId === activeMarkdownId,
+    );
 
     setImportError(null);
     applyWorkspaceMutation(
@@ -894,6 +897,7 @@ function App() {
       },
       {
         editingNodeId: null,
+        activeMarkdownId: activeMarkdownShouldClear ? null : activeMarkdownId,
       },
     );
   }

@@ -17,6 +17,10 @@ export function MarkdownPane({
   hasMultipleSelection = false,
   isMobile = false,
 }: MarkdownPaneProps) {
+  const markdownTitle =
+    selectedNote?.title ?? selectedNode?.data.title ?? '未选择 Markdown';
+  const markdownId = selectedNote?.id ?? selectedNode?.data.noteId ?? '未关联 Markdown';
+
   return (
     <div
       className="pane-content pane-content--markdown"
@@ -24,20 +28,20 @@ export function MarkdownPane({
     >
       <div className="markdown-shell" data-mobile={isMobile}>
         <div className="markdown-shell__titlebar" data-mobile={isMobile}>
-          <strong>{selectedNode?.data.title ?? '未选择节点'}</strong>
-          <span>{selectedNode?.data.noteId ?? '未关联 Markdown'}</span>
+          <strong>{markdownTitle}</strong>
+          <span>{markdownId}</span>
         </div>
         <div className="markdown-shell__body">
-          {!selectedNode ? (
+          {!selectedNote && !selectedNode ? (
             <div className="markdown-empty-state">
-              <p>{hasMultipleSelection ? '当前选择了多个节点。' : '请选择一个节点。'}</p>
+              <p>{hasMultipleSelection ? '当前选择了多个节点。' : '请选择一个节点或 Markdown。'}</p>
               <p>
                 {hasMultipleSelection
                   ? '右侧只会展示单个节点对应的 Markdown 内容。'
-                  : '右侧会显示该节点对应的 Markdown 详情与公式内容。'}
+                  : '右侧会显示被选中的 Markdown 详情与公式内容。'}
               </p>
             </div>
-          ) : !selectedNode.data.noteId ? (
+          ) : !selectedNote && selectedNode && !selectedNode.data.noteId ? (
             <div className="markdown-empty-state">
               <p>当前节点还没有关联 markdown。</p>
               <p>你可以在左侧工具栏里为它选择或创建一个 Markdown。</p>

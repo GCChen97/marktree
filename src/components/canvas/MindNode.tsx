@@ -1,5 +1,5 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KnowledgeNode } from '../../types/graph';
 
 export function MindNode({ id, data }: NodeProps<KnowledgeNode>) {
@@ -12,13 +12,20 @@ export function MindNode({ id, data }: NodeProps<KnowledgeNode>) {
     setDraftTitle(data.title);
   }, [data.title]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!data.isEditingTitle) {
       return;
     }
 
-    inputRef.current?.focus();
-    inputRef.current?.select();
+    const focusInput = () => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    };
+
+    focusInput();
+    const frameId = requestAnimationFrame(focusInput);
+
+    return () => cancelAnimationFrame(frameId);
   }, [data.isEditingTitle]);
 
   function commitTitle() {
@@ -31,8 +38,10 @@ export function MindNode({ id, data }: NodeProps<KnowledgeNode>) {
       <div className="mind-node__header">
         {data.isEditingTitle ? (
           <input
+            autoFocus
             aria-label="节点标题编辑"
             className="mind-node__title-input"
+            data-node-id={id}
             onBlur={commitTitle}
             onChange={(event) => setDraftTitle(event.target.value)}
             onClick={(event) => event.stopPropagation()}

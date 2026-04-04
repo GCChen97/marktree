@@ -51,7 +51,7 @@ export type WorkspaceState = {
 
 export type AppState = {
   workspace: WorkspaceState;
-  selectedNodeId: string | null;
+  editingNodeId: string | null;
 };
 
 export type ExportedGraphData = {

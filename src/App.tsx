@@ -15,6 +15,7 @@ import { useResponsiveMode } from './hooks/useResponsiveMode';
 import { useThemePreference } from './hooks/useThemePreference';
 import type {
   CanvasViewportApi,
+  GraphDocument,
   GraphId,
   GraphReferenceRecord,
   KnowledgeEdge,
@@ -108,6 +109,22 @@ function buildDeleteMarkdownMessage(
   ].join('\n');
 }
 
+function setGraphSelectedNodes(graph: GraphDocument, nodeIds: string[]) {
+  const selectedNodeIdSet = new Set(nodeIds);
+
+  return {
+    ...graph,
+    nodes: graph.nodes.map((node) => ({
+      ...node,
+      selected: selectedNodeIdSet.has(node.id),
+    })),
+  };
+}
+
+function clearGraphSelectedNodes(graph: GraphDocument) {
+  return setGraphSelectedNodes(graph, []);
+}
+
 function App() {
   const { mode, sizes, setMode, setSizes } = usePersistentLayoutState();
   const {
@@ -125,7 +142,6 @@ function App() {
   const { theme, toggleTheme } = useThemePreference();
   const [canvasViewportApi, setCanvasViewportApi] =
     useState<CanvasViewportApi | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [activeMarkdownId, setActiveMarkdownId] = useState<NoteId | null>(null);
   const [editingGraphId, setEditingGraphId] = useState<GraphId | null>(null);
@@ -152,9 +168,19 @@ function App() {
     [workspaceState],
   );
 
+  const selectedNodeIds = useMemo(
+    () => currentGraph?.nodes.filter((node) => Boolean(node.selected)).map((node) => node.id) ?? [],
+    [currentGraph],
+  );
+
+  const primarySelectedNodeId =
+    selectedNodeIds.length === 1 ? selectedNodeIds[0] : null;
+
   const selectedNode = useMemo(
-    () => currentGraph?.nodes.find((node) => node.id === selectedNodeId) ?? null,
-    [currentGraph, selectedNodeId],
+    () =>
+      currentGraph?.nodes.find((node) => node.id === primarySelectedNodeId) ??
+      null,
+    [currentGraph, primarySelectedNodeId],
   );
 
   const selectedNote = useMemo<NoteRecord | null>(() => {
@@ -225,7 +251,6 @@ function App() {
     (
       updater: (currentWorkspace: WorkspaceState) => WorkspaceState,
       nextUiState?: {
-        selectedNodeId?: string | null;
         editingNodeId?: string | null;
         activeMarkdownId?: NoteId | null;
       },
@@ -235,10 +260,6 @@ function App() {
       }
 
       setWorkspace((currentWorkspace) => updater(currentWorkspace));
-
-      if (nextUiState && 'selectedNodeId' in nextUiState) {
-        setSelectedNodeId(nextUiState.selectedNodeId ?? null);
-      }
 
       if (nextUiState && 'editingNodeId' in nextUiState) {
         setEditingNodeId(nextUiState.editingNodeId ?? null);
@@ -258,14 +279,12 @@ function App() {
   }, [viewportMode]);
 
   useEffect(() => {
-    if (
-      selectedNodeId &&
-      !currentGraph?.nodes.some((node) => node.id === selectedNodeId)
-    ) {
-      setSelectedNodeId(null);
+    const availableNodeIds = new Set(currentGraph?.nodes.map((node) => node.id) ?? []);
+
+    if (editingNodeId && !availableNodeIds.has(editingNodeId)) {
       setEditingNodeId(null);
     }
-  }, [currentGraph, selectedNodeId]);
+  }, [currentGraph, editingNodeId, selectedNodeIds]);
 
   useEffect(() => {
     if (selectedNode) {
@@ -406,17 +425,27 @@ function App() {
     });
   }
 
-  function handleSelectNode(nodeId: string | null) {
-    setSelectedNodeId(nodeId);
-
-    if (nodeId !== editingNodeId) {
-      setEditingNodeId(null);
-    }
-  }
-
   function handleStartNodeTitleEdit(nodeId: string) {
-    setSelectedNodeId(nodeId);
-    setEditingNodeId(nodeId);
+    applyWorkspaceMutation(
+      (currentWorkspace) => {
+        const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+        if (!graph) {
+          return currentWorkspace;
+        }
+
+        return {
+          ...currentWorkspace,
+          graphs: {
+            ...currentWorkspace.graphs,
+            [graph.id]: setGraphSelectedNodes(graph, [nodeId]),
+          },
+        };
+      },
+      {
+        editingNodeId: nodeId,
+      },
+    );
   }
 
   function handleCommitNodeTitleEdit(nodeId: string, title: string) {
@@ -450,7 +479,6 @@ function App() {
         };
       },
       {
-        selectedNodeId: nodeId,
         editingNodeId: null,
       },
     );
@@ -462,13 +490,22 @@ function App() {
 
   function handleSelectGraph(graphId: GraphId) {
     setImportError(null);
-    setSelectedNodeId(null);
     setEditingNodeId(null);
     setEditingGraphId(null);
-    setWorkspace((currentWorkspace) => ({
-      ...currentWorkspace,
-      currentGraphId: graphId,
-    }));
+    setWorkspace((currentWorkspace) => {
+      const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+      return {
+        ...currentWorkspace,
+        currentGraphId: graphId,
+        graphs: graph
+          ? {
+              ...currentWorkspace.graphs,
+              [graph.id]: clearGraphSelectedNodes(graph),
+            }
+          : currentWorkspace.graphs,
+      };
+    });
   }
 
   function handleCreateGraph() {
@@ -494,7 +531,6 @@ function App() {
         };
       },
       {
-        selectedNodeId: null,
         editingNodeId: null,
         activeMarkdownId: null,
       },
@@ -539,7 +575,6 @@ function App() {
     }
 
     setImportError(null);
-    setSelectedNodeId(null);
     setEditingNodeId(null);
     setWorkspace((currentWorkspace) => {
       const cleanedWorkspace = clearGraphReferences(
@@ -587,13 +622,22 @@ function App() {
             ...currentWorkspace.graphs,
             [graph.id]: {
               ...graph,
-              nodes: [...graph.nodes, node],
+              nodes: [
+                ...graph.nodes.map((currentNode) => ({
+                  ...currentNode,
+                  selected: false,
+                })),
+                {
+                  ...node,
+                  selected: true,
+                },
+              ],
             },
           },
         };
       },
       {
-        selectedNodeId: nodeId,
+        editingNodeId: nodeId,
         activeMarkdownId: null,
       },
     );
@@ -630,14 +674,22 @@ function App() {
             ...currentWorkspace.graphs,
             [graph.id]: {
               ...graph,
-              nodes: [...graph.nodes, node],
+              nodes: [
+                ...graph.nodes.map((currentNode) => ({
+                  ...currentNode,
+                  selected: false,
+                })),
+                {
+                  ...node,
+                  selected: true,
+                },
+              ],
               edges: [...graph.edges, nextEdge],
             },
           },
         };
       },
       {
-        selectedNodeId: nodeId,
         editingNodeId: nodeId,
         activeMarkdownId: null,
       },
@@ -697,14 +749,22 @@ function App() {
             ...currentWorkspace.graphs,
             [graph.id]: {
               ...graph,
-              nodes: [...graph.nodes, node],
+              nodes: [
+                ...graph.nodes.map((currentNode) => ({
+                  ...currentNode,
+                  selected: false,
+                })),
+                {
+                  ...node,
+                  selected: true,
+                },
+              ],
               edges: nextEdge ? [...graph.edges, nextEdge] : graph.edges,
             },
           },
         };
       },
       {
-        selectedNodeId: nodeId,
         editingNodeId: nodeId,
         activeMarkdownId: null,
       },
@@ -712,10 +772,12 @@ function App() {
     setImportError(null);
   }
 
-  function handleDeleteSelectedNode() {
-    if (!selectedNodeId || !currentGraph) {
+  function handleDeleteSelectedNodes() {
+    if (selectedNodeIds.length === 0 || !currentGraph) {
       return;
     }
+
+    const nodeIdsToDelete = new Set(selectedNodeIds);
 
     setImportError(null);
     applyWorkspaceMutation(
@@ -732,17 +794,17 @@ function App() {
             ...currentWorkspace.graphs,
             [graph.id]: {
               ...graph,
-              nodes: graph.nodes.filter((node) => node.id !== selectedNodeId),
+              nodes: graph.nodes.filter((node) => !nodeIdsToDelete.has(node.id)),
               edges: graph.edges.filter(
                 (edge) =>
-                  edge.source !== selectedNodeId && edge.target !== selectedNodeId,
+                  !nodeIdsToDelete.has(edge.source) &&
+                  !nodeIdsToDelete.has(edge.target),
               ),
             },
           },
         };
       },
       {
-        selectedNodeId: null,
         editingNodeId: null,
       },
     );
@@ -865,12 +927,21 @@ function App() {
       return;
     }
 
-    setSelectedNodeId(null);
     setEditingNodeId(null);
-    setWorkspace((currentWorkspace) => ({
-      ...currentWorkspace,
-      currentGraphId: targetGraphId,
-    }));
+    setWorkspace((currentWorkspace) => {
+      const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+      return {
+        ...currentWorkspace,
+        currentGraphId: targetGraphId,
+        graphs: graph
+          ? {
+              ...currentWorkspace.graphs,
+              [graph.id]: clearGraphSelectedNodes(graph),
+            }
+          : currentWorkspace.graphs,
+      };
+    });
   }
 
   function handleFitView() {
@@ -928,7 +999,6 @@ function App() {
       return;
     }
 
-    setSelectedNodeId(null);
     setEditingNodeId(null);
     setActiveMarkdownId(null);
     setImportError(null);
@@ -1115,7 +1185,7 @@ function App() {
         activeMarkdownId && workspaceState.notes[activeMarkdownId],
       )}
       canDeleteCurrentGraph={workspaceState.graphOrder.length > 1}
-      canDeleteSelectedNode={Boolean(selectedNode)}
+      canDeleteSelectedNode={selectedNodeIds.length > 0}
       canRenameActiveMarkdown={Boolean(
         activeMarkdownId && workspaceState.notes[activeMarkdownId],
       )}
@@ -1145,7 +1215,7 @@ function App() {
       onCreateNode={handleCreateNode}
       onDeleteActiveMarkdown={handleDeleteActiveMarkdown}
       onDeleteCurrentGraph={handleDeleteCurrentGraph}
-      onDeleteSelectedNode={handleDeleteSelectedNode}
+      onDeleteSelectedNode={handleDeleteSelectedNodes}
       onExportCurrentGraph={handleExportCurrentGraph}
       onExportWorkspace={handleExportWorkspace}
       onImportData={handleImportData}
@@ -1201,25 +1271,25 @@ function App() {
       onCenterSelected={handleCenterSelected}
       onCommitNodeTitleEdit={handleCommitNodeTitleEdit}
       onConnectEdge={handleConnectEdge}
+      onCreateNode={handleCreateNode}
       onCreateChildNodeFromSelection={handleCreateChildNodeFromSelection}
       onCreateSiblingNodeFromSelection={handleCreateSiblingNodeFromSelection}
-      onDeleteSelectedNodeByShortcut={handleDeleteSelectedNode}
+      onDeleteSelectedNodesByShortcut={handleDeleteSelectedNodes}
       onEdgesChange={handleEdgesChange}
       onEnterLinkedGraph={handleEnterLinkedGraph}
       onFitView={handleFitView}
       onNodesChange={handleNodesChange}
-      onSelectNode={handleSelectNode}
       onStartNodeTitleEdit={handleStartNodeTitleEdit}
       onCancelNodeTitleEdit={handleCancelNodeTitleEdit}
       onViewportApiReady={setCanvasViewportApi}
       onZoomIn={handleZoomIn}
       onZoomOut={handleZoomOut}
-      selectedNodeId={selectedNodeId}
     />
   );
 
   const markdownPane = (
     <MarkdownPane
+      hasMultipleSelection={selectedNodeIds.length > 1}
       isMobile={isMobile}
       selectedNode={selectedNode}
       selectedNote={selectedNote}

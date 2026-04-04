@@ -390,7 +390,7 @@ export function ToolbarPane({
         <div className="section-heading-row">
           <div className="graph-management__heading">
             <h2 className="section-title">Markdown 管理</h2>
-            <span className="section-badge">{markdownItems.length} 个 Markdown</span>
+            <span className="section-badge">{markdownItems.length}</span>
           </div>
           {!isReadOnly ? (
             <div className="graph-management__header-actions">
@@ -533,7 +533,7 @@ export function ToolbarPane({
         <div className="section-heading-row">
           <div className="graph-management__heading">
             <h2 className="section-title">Graph 管理</h2>
-            <span className="section-badge">{graphItems.length} 个 graph</span>
+            <span className="section-badge">{graphItems.length}</span>
           </div>
           {!isReadOnly ? (
             <div className="graph-management__header-actions">

@@ -2,11 +2,12 @@ import {
   type Connection,
   Position,
   ReactFlow,
+  SelectionMode,
   applyEdgeChanges,
   applyNodeChanges,
   useReactFlow,
 } from '@xyflow/react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import type {
   NodeTypes,
@@ -27,18 +28,17 @@ type CanvasPaneProps = {
   nodes: KnowledgeNode[];
   edges: KnowledgeEdge[];
   isReadOnly: boolean;
-  selectedNodeId: string | null;
   editingNodeId: string | null;
   onNodesChange: (nodes: KnowledgeNode[]) => void;
   onEdgesChange: (edges: KnowledgeEdge[]) => void;
   onConnectEdge: (connection: Connection) => void;
-  onSelectNode: (nodeId: string | null) => void;
+  onCreateNode: () => void;
   onStartNodeTitleEdit: (nodeId: string) => void;
   onCommitNodeTitleEdit: (nodeId: string, title: string) => void;
   onCancelNodeTitleEdit: () => void;
   onCreateSiblingNodeFromSelection: () => void;
   onCreateChildNodeFromSelection: () => void;
-  onDeleteSelectedNodeByShortcut: () => void;
+  onDeleteSelectedNodesByShortcut: () => void;
   onViewportApiReady: (api: CanvasViewportApi | null) => void;
   onEnterLinkedGraph: (targetGraphId: GraphId) => void;
   onFitView: () => void;
@@ -127,18 +127,17 @@ export function CanvasPane({
   nodes,
   edges,
   isReadOnly,
-  selectedNodeId,
   editingNodeId,
   onNodesChange,
   onEdgesChange,
   onConnectEdge,
-  onSelectNode,
+  onCreateNode,
   onStartNodeTitleEdit,
   onCommitNodeTitleEdit,
   onCancelNodeTitleEdit,
   onCreateSiblingNodeFromSelection,
   onCreateChildNodeFromSelection,
-  onDeleteSelectedNodeByShortcut,
+  onDeleteSelectedNodesByShortcut,
   onViewportApiReady,
   onEnterLinkedGraph,
   onFitView,
@@ -149,6 +148,35 @@ export function CanvasPane({
   isMobile = false,
 }: CanvasPaneProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null);
+  const previousEditingNodeIdRef = useRef<string | null>(null);
+
+  useLayoutEffect(() => {
+    if (!editingNodeId) {
+      return;
+    }
+
+    const focusEditor = () => {
+      const editor = document.querySelector(
+        `input[data-node-id="${editingNodeId}"]`,
+      ) as HTMLInputElement | null;
+
+      editor?.focus();
+      editor?.select();
+    };
+
+    focusEditor();
+    const frameId = requestAnimationFrame(focusEditor);
+
+    return () => cancelAnimationFrame(frameId);
+  }, [editingNodeId, nodes]);
+
+  useLayoutEffect(() => {
+    if (previousEditingNodeIdRef.current && !editingNodeId) {
+      surfaceRef.current?.focus();
+    }
+
+    previousEditingNodeIdRef.current = editingNodeId;
+  }, [editingNodeId]);
 
   const displayNodes = useMemo(
     () =>
@@ -167,7 +195,7 @@ export function CanvasPane({
             onCancelTitleEdit: isReadOnly ? null : onCancelNodeTitleEdit,
             onEnterLinkedGraph,
           },
-          selected: node.id === selectedNodeId,
+          selected: Boolean(node.selected),
           draggable: !isReadOnly,
           sourcePosition: node.sourcePosition ?? Position.Right,
           targetPosition: node.targetPosition ?? Position.Left,
@@ -196,7 +224,6 @@ export function CanvasPane({
       onCommitNodeTitleEdit,
       onEnterLinkedGraph,
       onStartNodeTitleEdit,
-      selectedNodeId,
     ],
   );
 
@@ -229,13 +256,25 @@ export function CanvasPane({
       return;
     }
 
-    if (event.key === 'Delete') {
+    if (event.key === 'Delete' || event.key.toLowerCase() === 'x') {
       event.preventDefault();
-      onDeleteSelectedNodeByShortcut();
+      onDeleteSelectedNodesByShortcut();
+      return;
+    }
+
+    if (event.key.toLowerCase() === 'a') {
+      event.preventDefault();
+      onCreateNode();
       return;
     }
 
     if (event.key !== 'Enter') {
+      return;
+    }
+
+    const selectedNodes = nodes.filter((node) => Boolean(node.selected));
+
+    if (selectedNodes.length !== 1) {
       return;
     }
 
@@ -357,13 +396,13 @@ export function CanvasPane({
           edges={edges}
           fitView
           nodeTypes={nodeTypes}
+          nodesFocusable
           nodesConnectable={!isReadOnly}
           nodesDraggable={!isReadOnly}
           nodes={displayNodes}
           onConnect={handleConnect}
           onEdgesChange={handleEdgesChange}
           onNodeClick={(_, node) => {
-            onSelectNode(node.id);
             surfaceRef.current?.focus();
           }}
           onNodeDoubleClick={(_, node) => {
@@ -373,9 +412,12 @@ export function CanvasPane({
           }}
           onNodesChange={handleNodesChange}
           onPaneClick={() => {
-            onSelectNode(null);
             surfaceRef.current?.focus();
           }}
+          panOnDrag={[1, 2]}
+          selectNodesOnDrag={false}
+          selectionMode={SelectionMode.Partial}
+          selectionOnDrag
           proOptions={{ hideAttribution: true }}
         >
           <CanvasViewportBridge onViewportApiReady={onViewportApiReady} />

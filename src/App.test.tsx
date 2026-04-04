@@ -411,9 +411,13 @@ describe('App', () => {
     const markdownItemCount = getMarkdownList().getAllByRole('option').length;
 
     fireEvent.click(screen.getByRole('button', { name: '新建节点' }));
-    fireEvent.click(getFlowNodeByLabel('Untitled'));
 
-    expect(screen.getAllByText('Untitled').length).toBeGreaterThan(0);
+    const titleEditor = screen.getByLabelText('节点标题编辑', {
+      selector: 'input',
+    });
+
+    expect(titleEditor).toBeInTheDocument();
+    expect(document.activeElement).toBe(titleEditor);
     expect(screen.getByText('当前节点还没有关联 markdown。')).toBeInTheDocument();
     expect(getMarkdownList().getAllByRole('option')).toHaveLength(markdownItemCount);
 
@@ -423,12 +427,28 @@ describe('App', () => {
   it('creates sibling, child, and delete actions from canvas keyboard shortcuts', async () => {
     const createNodeIdSpy = vi
       .spyOn(graphUtils, 'createNodeId')
+      .mockReturnValueOnce('node_isolated')
       .mockReturnValueOnce('node_child')
       .mockReturnValueOnce('node_sibling');
 
     render(<App />);
 
     const canvasSurface = screen.getByTestId('graph-canvas-surface');
+    canvasSurface.focus();
+    fireEvent.keyDown(canvasSurface, { key: 'a' });
+
+    await waitFor(() => {
+      const editors = screen.getAllByLabelText('节点标题编辑', {
+        selector: 'input',
+      });
+
+      expect(editors).toHaveLength(1);
+      expect(document.activeElement).toBe(editors[0]);
+    });
+
+    fireEvent.keyDown(screen.getByLabelText('节点标题编辑', { selector: 'input' }), {
+      key: 'Escape',
+    });
 
     fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
     canvasSurface.focus();

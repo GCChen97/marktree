@@ -13,6 +13,12 @@ const viewportMocks = vi.hoisted(() => ({
   screenToFlowPosition: vi.fn(),
 }));
 
+const flowPropMocks = vi.hoisted(() => ({
+  panOnDrag: undefined as unknown,
+  selectionOnDrag: undefined as unknown,
+  lastOnNodesChange: undefined as unknown,
+}));
+
 vi.mock('@xyflow/react', async () => {
   const { createElement } = await import('react');
 
@@ -22,29 +28,70 @@ vi.mock('@xyflow/react', async () => {
       Left: 'left',
       Right: 'right',
     },
+    SelectionMode: {
+      Partial: 'partial',
+      Full: 'full',
+    },
     ReactFlow: ({
       children,
       className,
       onConnect,
+      onNodeClick,
+      onPaneClick,
+      nodes,
+      onNodesChange,
+      panOnDrag,
+      selectionOnDrag,
     }: {
       children?: ReactNode;
       className?: string;
       onConnect?: (connection: { source: string; target: string }) => void;
+      onNodeClick?: (_event: unknown, node: { id: string }) => void;
+      onPaneClick?: () => void;
+      nodes?: Array<{ id: string }>;
+      onNodesChange?: unknown;
+      panOnDrag?: unknown;
+      selectionOnDrag?: unknown;
     }) =>
-      createElement(
-        'div',
-        { className },
-        createElement('div', { className: 'react-flow__renderer' }),
-        createElement(
-          'button',
-          {
-            onClick: () => onConnect?.({ source: 'node_a', target: 'node_b' }),
-            type: 'button',
-          },
-          'Mock Connect',
-        ),
-        children,
-      ),
+      (() => {
+        flowPropMocks.panOnDrag = panOnDrag;
+        flowPropMocks.selectionOnDrag = selectionOnDrag;
+        flowPropMocks.lastOnNodesChange = onNodesChange;
+
+        return createElement(
+          'div',
+          { className },
+          createElement('div', { className: 'react-flow__renderer' }),
+          createElement(
+            'button',
+            {
+              onClick: () => onConnect?.({ source: 'node_a', target: 'node_b' }),
+              type: 'button',
+            },
+            'Mock Connect',
+          ),
+          ...(nodes ?? []).map((node) =>
+            createElement(
+              'button',
+              {
+                key: node.id,
+                onClick: () => onNodeClick?.({}, node),
+                type: 'button',
+              },
+              `Mock Node ${node.id}`,
+            ),
+          ),
+          createElement(
+            'button',
+            {
+              onClick: () => onPaneClick?.(),
+              type: 'button',
+            },
+            'Mock Pane Click',
+          ),
+          children,
+        );
+      })(),
     applyEdgeChanges: (_changes: unknown, edges: unknown) => edges,
     applyNodeChanges: (_changes: unknown, nodes: unknown) => nodes,
     useReactFlow: () => ({
@@ -70,6 +117,9 @@ describe('CanvasPane viewport bridge', () => {
     viewportMocks.setCenter.mockReset();
     viewportMocks.getInternalNode.mockReset();
     viewportMocks.screenToFlowPosition.mockReset();
+    flowPropMocks.panOnDrag = undefined;
+    flowPropMocks.selectionOnDrag = undefined;
+    flowPropMocks.lastOnNodesChange = undefined;
     viewportMocks.screenToFlowPosition.mockImplementation(
       ({ x, y }: { x: number; y: number }) => ({
         x: x / 2,
@@ -100,13 +150,14 @@ describe('CanvasPane viewport bridge', () => {
         noteId: 'note_focus',
         kind: 'default',
       },
+      selected: true,
     };
 
     const { container } = render(
       <CanvasPane
         canCenterSelected
         currentGraphId="graph_focus"
-        editingNodeId={null}
+        editingNodeId="node_focus"
         edges={[]}
         isReadOnly={false}
         nodes={[node]}
@@ -114,21 +165,20 @@ describe('CanvasPane viewport bridge', () => {
         onCancelNodeTitleEdit={() => {}}
         onCommitNodeTitleEdit={() => {}}
         onConnectEdge={viewportMocks.connect}
+        onCreateNode={() => {}}
         onCreateChildNodeFromSelection={() => {}}
         onCreateSiblingNodeFromSelection={() => {}}
-        onDeleteSelectedNodeByShortcut={() => {}}
+        onDeleteSelectedNodesByShortcut={() => {}}
         onEdgesChange={() => {}}
         onEnterLinkedGraph={() => {}}
         onFitView={() => {}}
         onNodesChange={() => {}}
-        onSelectNode={() => {}}
         onStartNodeTitleEdit={() => {}}
         onViewportApiReady={(api) => {
           viewportApi = api;
         }}
         onZoomIn={() => {}}
         onZoomOut={() => {}}
-        selectedNodeId={null}
       />,
     );
 
@@ -210,19 +260,18 @@ describe('CanvasPane viewport bridge', () => {
         onCancelNodeTitleEdit={() => {}}
         onCommitNodeTitleEdit={() => {}}
         onConnectEdge={viewportMocks.connect}
+        onCreateNode={() => {}}
         onCreateChildNodeFromSelection={() => {}}
         onCreateSiblingNodeFromSelection={() => {}}
-        onDeleteSelectedNodeByShortcut={() => {}}
+        onDeleteSelectedNodesByShortcut={() => {}}
         onEdgesChange={() => {}}
         onEnterLinkedGraph={() => {}}
         onFitView={fitView}
         onNodesChange={() => {}}
-        onSelectNode={() => {}}
         onStartNodeTitleEdit={() => {}}
         onViewportApiReady={() => {}}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
-        selectedNodeId={null}
       />,
     );
 
@@ -242,7 +291,7 @@ describe('CanvasPane viewport bridge', () => {
     expect(centerSelected).not.toHaveBeenCalled();
   });
 
-  it('routes enter, shift+enter, and delete shortcuts from the canvas surface', () => {
+  it('routes enter, a, shift+enter, and delete/x shortcuts from the canvas surface', () => {
     const node: KnowledgeNode = {
       id: 'node_focus',
       position: { x: 120, y: 80 },
@@ -251,7 +300,9 @@ describe('CanvasPane viewport bridge', () => {
         noteId: 'note_focus',
         kind: 'default',
       },
+      selected: true,
     };
+    const createNode = vi.fn();
     const createSibling = vi.fn();
     const createChild = vi.fn();
     const deleteSelected = vi.fn();
@@ -268,19 +319,18 @@ describe('CanvasPane viewport bridge', () => {
         onCancelNodeTitleEdit={() => {}}
         onCommitNodeTitleEdit={() => {}}
         onConnectEdge={viewportMocks.connect}
+        onCreateNode={createNode}
         onCreateChildNodeFromSelection={createChild}
         onCreateSiblingNodeFromSelection={createSibling}
-        onDeleteSelectedNodeByShortcut={deleteSelected}
+        onDeleteSelectedNodesByShortcut={deleteSelected}
         onEdgesChange={() => {}}
         onEnterLinkedGraph={() => {}}
         onFitView={() => {}}
         onNodesChange={() => {}}
-        onSelectNode={() => {}}
         onStartNodeTitleEdit={() => {}}
         onViewportApiReady={() => {}}
         onZoomIn={() => {}}
         onZoomOut={() => {}}
-        selectedNodeId="node_focus"
       />,
     );
 
@@ -288,11 +338,234 @@ describe('CanvasPane viewport bridge', () => {
     canvasSurface.focus();
 
     fireEvent.keyDown(canvasSurface, { key: 'Enter' });
+    fireEvent.keyDown(canvasSurface, { key: 'a' });
     fireEvent.keyDown(canvasSurface, { key: 'Enter', shiftKey: true });
+    fireEvent.keyDown(canvasSurface, { key: 'x' });
     fireEvent.keyDown(canvasSurface, { key: 'Delete' });
 
+    expect(createNode).toHaveBeenCalledTimes(1);
     expect(createSibling).toHaveBeenCalledTimes(1);
     expect(createChild).toHaveBeenCalledTimes(1);
-    expect(deleteSelected).toHaveBeenCalledTimes(1);
+    expect(deleteSelected).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not trigger a/x shortcuts while typing in an input target', () => {
+    const createNode = vi.fn();
+    const createSibling = vi.fn();
+    const deleteSelected = vi.fn();
+
+    render(
+      <div>
+        <input aria-label="typing-target" />
+        <CanvasPane
+          canCenterSelected={false}
+          currentGraphId="graph_focus"
+          editingNodeId={null}
+          edges={[]}
+          isReadOnly={false}
+          nodes={[]}
+          onCenterSelected={() => {}}
+          onCancelNodeTitleEdit={() => {}}
+          onCommitNodeTitleEdit={() => {}}
+          onConnectEdge={() => {}}
+          onCreateNode={createNode}
+          onCreateChildNodeFromSelection={() => {}}
+          onCreateSiblingNodeFromSelection={createSibling}
+          onDeleteSelectedNodesByShortcut={deleteSelected}
+          onEdgesChange={() => {}}
+          onEnterLinkedGraph={() => {}}
+          onFitView={() => {}}
+          onNodesChange={() => {}}
+          onStartNodeTitleEdit={() => {}}
+          onViewportApiReady={() => {}}
+          onZoomIn={() => {}}
+          onZoomOut={() => {}}
+        />
+      </div>,
+    );
+
+    const input = screen.getByLabelText('typing-target');
+
+    fireEvent.keyDown(input, { key: 'a' });
+    fireEvent.keyDown(input, { key: 'x' });
+
+    expect(createNode).not.toHaveBeenCalled();
+    expect(createSibling).not.toHaveBeenCalled();
+    expect(deleteSelected).not.toHaveBeenCalled();
+  });
+
+  it('applies React Flow selection changes and blocks Enter actions while multiple nodes are selected', () => {
+    const createSibling = vi.fn();
+    const createChild = vi.fn();
+    const onNodesChange = vi.fn();
+    const nodeA: KnowledgeNode = {
+      id: 'node_a',
+      position: { x: 0, y: 0 },
+      data: {
+        title: 'Node A',
+        noteId: null,
+        kind: 'default',
+      },
+      selected: true,
+    };
+    const nodeB: KnowledgeNode = {
+      id: 'node_b',
+      position: { x: 120, y: 80 },
+      data: {
+        title: 'Node B',
+        noteId: null,
+        kind: 'default',
+      },
+      selected: true,
+    };
+
+    render(
+      <CanvasPane
+        canCenterSelected={false}
+        currentGraphId="graph_focus"
+        editingNodeId={null}
+        edges={[]}
+        isReadOnly={false}
+        nodes={[nodeA, nodeB]}
+        onCenterSelected={() => {}}
+        onCancelNodeTitleEdit={() => {}}
+        onCommitNodeTitleEdit={() => {}}
+        onConnectEdge={() => {}}
+        onCreateNode={() => {}}
+        onCreateChildNodeFromSelection={createChild}
+        onCreateSiblingNodeFromSelection={createSibling}
+        onDeleteSelectedNodesByShortcut={() => {}}
+        onEdgesChange={() => {}}
+        onEnterLinkedGraph={() => {}}
+        onFitView={() => {}}
+        onNodesChange={onNodesChange}
+        onStartNodeTitleEdit={() => {}}
+        onViewportApiReady={() => {}}
+        onZoomIn={() => {}}
+        onZoomOut={() => {}}
+      />,
+    );
+
+    expect(flowPropMocks.lastOnNodesChange).toBeDefined();
+    (flowPropMocks.lastOnNodesChange as (changes: unknown) => void)([
+      { id: 'node_a', type: 'select', selected: true },
+      { id: 'node_b', type: 'select', selected: true },
+    ]);
+
+    expect(onNodesChange).toHaveBeenCalled();
+
+    const canvasSurface = screen.getByTestId('graph-canvas-surface');
+    canvasSurface.focus();
+    fireEvent.keyDown(canvasSurface, { key: 'Enter' });
+    fireEvent.keyDown(canvasSurface, { key: 'Enter', shiftKey: true });
+
+    expect(createSibling).not.toHaveBeenCalled();
+    expect(createChild).not.toHaveBeenCalled();
+  });
+
+  it('reserves left-drag for marquee selection instead of canvas panning', () => {
+    render(
+      <CanvasPane
+        canCenterSelected={false}
+        currentGraphId="graph_focus"
+        editingNodeId={null}
+        edges={[]}
+        isReadOnly={false}
+        nodes={[]}
+        onCenterSelected={() => {}}
+        onCancelNodeTitleEdit={() => {}}
+        onCommitNodeTitleEdit={() => {}}
+        onConnectEdge={() => {}}
+        onCreateNode={() => {}}
+        onCreateChildNodeFromSelection={() => {}}
+        onCreateSiblingNodeFromSelection={() => {}}
+        onDeleteSelectedNodesByShortcut={() => {}}
+        onEdgesChange={() => {}}
+        onEnterLinkedGraph={() => {}}
+        onFitView={() => {}}
+        onNodesChange={() => {}}
+        onStartNodeTitleEdit={() => {}}
+        onViewportApiReady={() => {}}
+        onZoomIn={() => {}}
+        onZoomOut={() => {}}
+      />,
+    );
+
+    expect(flowPropMocks.selectionOnDrag).toBe(true);
+    expect(flowPropMocks.panOnDrag).toEqual([1, 2]);
+  });
+
+  it('keeps the canvas surface focusable after inline title editing ends', () => {
+    const node: KnowledgeNode = {
+      id: 'node_focus',
+      position: { x: 120, y: 80 },
+      data: {
+        title: 'Focus Node',
+        noteId: null,
+        kind: 'default',
+      },
+    };
+
+    const { rerender } = render(
+      <CanvasPane
+        canCenterSelected
+        currentGraphId="graph_focus"
+        editingNodeId={null}
+        edges={[]}
+        isReadOnly={false}
+        nodes={[node]}
+        onCenterSelected={() => {}}
+        onCancelNodeTitleEdit={() => {}}
+        onCommitNodeTitleEdit={() => {}}
+        onConnectEdge={() => {}}
+        onCreateNode={() => {}}
+        onCreateChildNodeFromSelection={() => {}}
+        onCreateSiblingNodeFromSelection={() => {}}
+        onDeleteSelectedNodesByShortcut={() => {}}
+        onEdgesChange={() => {}}
+        onEnterLinkedGraph={() => {}}
+        onFitView={() => {}}
+        onNodesChange={() => {}}
+        onStartNodeTitleEdit={() => {}}
+        onViewportApiReady={() => {}}
+        onZoomIn={() => {}}
+        onZoomOut={() => {}}
+      />,
+    );
+
+    const canvasSurface = screen.getByTestId('graph-canvas-surface');
+
+    rerender(
+      <CanvasPane
+        canCenterSelected
+        currentGraphId="graph_focus"
+        editingNodeId={null}
+        edges={[]}
+        isReadOnly={false}
+        nodes={[node]}
+        onCenterSelected={() => {}}
+        onCancelNodeTitleEdit={() => {}}
+        onCommitNodeTitleEdit={() => {}}
+        onConnectEdge={() => {}}
+        onCreateNode={() => {}}
+        onCreateChildNodeFromSelection={() => {}}
+        onCreateSiblingNodeFromSelection={() => {}}
+        onDeleteSelectedNodesByShortcut={() => {}}
+        onEdgesChange={() => {}}
+        onEnterLinkedGraph={() => {}}
+        onFitView={() => {}}
+        onNodesChange={() => {}}
+        onStartNodeTitleEdit={() => {}}
+        onViewportApiReady={() => {}}
+        onZoomIn={() => {}}
+        onZoomOut={() => {}}
+      />,
+    );
+
+    expect(canvasSurface).toHaveAttribute('tabindex', '0');
+    expect(screen.getByTestId('graph-canvas-surface')).toHaveAttribute(
+      'tabindex',
+      '0',
+    );
   });
 });

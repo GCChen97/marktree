@@ -879,11 +879,27 @@ button {
 .graph-canvas .react-flow__renderer,
 .graph-canvas .react-flow__pane,
 .graph-canvas .react-flow__viewport {
-  cursor: grab;
+  cursor: default;
 }
 
-.graph-canvas .react-flow__pane:active {
-  cursor: grabbing;
+.graph-canvas .react-flow__pane.selection {
+  cursor: default;
+}
+
+.graph-canvas .react-flow__selection,
+.graph-canvas .react-flow__nodesselection-rect {
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  background: color-mix(in srgb, var(--accent-soft) 18%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-soft) 18%, transparent);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+:root[data-theme='night'] .graph-canvas .react-flow__selection,
+:root[data-theme='night'] .graph-canvas .react-flow__nodesselection-rect {
+  border-color: color-mix(in srgb, #8dc5ba 42%, rgba(34, 57, 59, 0.9));
+  background: color-mix(in srgb, #78b7a9 16%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #78b7a9 12%, transparent);
 }
 
 .graph-canvas .react-flow__node {

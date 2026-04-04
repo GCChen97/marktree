@@ -7,12 +7,14 @@ import type { KnowledgeNode, NoteRecord } from '../../types/graph';
 type MarkdownPaneProps = {
   selectedNode: KnowledgeNode | null;
   selectedNote: NoteRecord | null;
+  hasMultipleSelection?: boolean;
   isMobile?: boolean;
 };
 
 export function MarkdownPane({
   selectedNode,
   selectedNote,
+  hasMultipleSelection = false,
   isMobile = false,
 }: MarkdownPaneProps) {
   return (
@@ -39,8 +41,12 @@ export function MarkdownPane({
           <div className="markdown-shell__body">
           {!selectedNode ? (
             <div className="markdown-empty-state">
-              <p>请选择一个节点。</p>
-              <p>右侧会显示该节点对应的 Markdown 详情与公式内容。</p>
+              <p>{hasMultipleSelection ? '当前选择了多个节点。' : '请选择一个节点。'}</p>
+              <p>
+                {hasMultipleSelection
+                  ? '右侧只会展示单个节点对应的 Markdown 内容。'
+                  : '右侧会显示该节点对应的 Markdown 详情与公式内容。'}
+              </p>
             </div>
           ) : !selectedNode.data.noteId ? (
             <div className="markdown-empty-state">

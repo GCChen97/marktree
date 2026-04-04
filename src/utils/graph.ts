@@ -9,6 +9,7 @@ import type {
   GraphConnectionOrientation,
   GraphEdgeStyle,
   GraphId,
+  GraphViewport,
   GraphReferenceIndex,
   GraphReferenceRecord,
   KnowledgeEdge,
@@ -41,6 +42,26 @@ function normalizeEdgeStyle(style: unknown): GraphEdgeStyle | undefined {
   }
 
   return undefined;
+}
+
+function normalizeViewport(viewport: unknown): GraphViewport | undefined {
+  if (!isPlainObject(viewport)) {
+    return undefined;
+  }
+
+  if (
+    typeof viewport.x !== 'number' ||
+    typeof viewport.y !== 'number' ||
+    typeof viewport.zoom !== 'number'
+  ) {
+    return undefined;
+  }
+
+  return {
+    x: viewport.x,
+    y: viewport.y,
+    zoom: viewport.zoom,
+  };
 }
 
 let nodeCounter = 0;
@@ -232,6 +253,8 @@ function isValidGraphDocument(graph: unknown): graph is GraphDocument {
     (graph.edgeStyle === undefined ||
       graph.edgeStyle === 'curved' ||
       graph.edgeStyle === 'elbow') &&
+    (graph.viewport === undefined ||
+      normalizeViewport(graph.viewport) !== undefined) &&
     Array.isArray(graph.nodes) &&
     graph.nodes.every(isValidNode) &&
     Array.isArray(graph.edges) &&
@@ -247,6 +270,7 @@ function sanitizeGraphDocument(graph: GraphDocument): GraphDocument {
       graph.connectionOrientation,
     ),
     edgeStyle: normalizeEdgeStyle(graph.edgeStyle),
+    viewport: normalizeViewport(graph.viewport),
     nodes: graph.nodes.map((node) => ({
       ...node,
       type: node.data.kind === 'jump' ? 'jump' : 'mind',

@@ -9,6 +9,8 @@ const viewportMocks = vi.hoisted(() => ({
   zoomIn: vi.fn(),
   zoomOut: vi.fn(),
   setCenter: vi.fn(),
+  setViewport: vi.fn(),
+  getViewport: vi.fn(),
   getInternalNode: vi.fn(),
   screenToFlowPosition: vi.fn(),
 }));
@@ -17,6 +19,7 @@ const flowPropMocks = vi.hoisted(() => ({
   panOnDrag: undefined as unknown,
   selectionOnDrag: undefined as unknown,
   lastOnNodesChange: undefined as unknown,
+  lastOnMoveEnd: undefined as unknown,
   lastNodes: undefined as unknown,
   lastEdges: undefined as unknown,
 }));
@@ -41,6 +44,7 @@ vi.mock('@xyflow/react', async () => {
       className,
       edges,
       onConnect,
+      onMoveEnd,
       onNodeClick,
       onPaneClick,
       nodes,
@@ -51,6 +55,7 @@ vi.mock('@xyflow/react', async () => {
       children?: ReactNode;
       className?: string;
       onConnect?: (connection: { source: string; target: string }) => void;
+      onMoveEnd?: unknown;
       onNodeClick?: (_event: unknown, node: { id: string }) => void;
       onPaneClick?: () => void;
       nodes?: Array<{ id: string }>;
@@ -63,6 +68,7 @@ vi.mock('@xyflow/react', async () => {
         flowPropMocks.panOnDrag = panOnDrag;
         flowPropMocks.selectionOnDrag = selectionOnDrag;
         flowPropMocks.lastOnNodesChange = onNodesChange;
+        flowPropMocks.lastOnMoveEnd = onMoveEnd;
         flowPropMocks.lastNodes = nodes;
         flowPropMocks.lastEdges = edges;
 
@@ -107,6 +113,8 @@ vi.mock('@xyflow/react', async () => {
       zoomIn: viewportMocks.zoomIn,
       zoomOut: viewportMocks.zoomOut,
       setCenter: viewportMocks.setCenter,
+      setViewport: viewportMocks.setViewport,
+      getViewport: viewportMocks.getViewport,
       getInternalNode: viewportMocks.getInternalNode,
       getZoom: () => 1.25,
       screenToFlowPosition: viewportMocks.screenToFlowPosition,
@@ -123,13 +131,26 @@ describe('CanvasPane viewport bridge', () => {
     viewportMocks.zoomIn.mockReset();
     viewportMocks.zoomOut.mockReset();
     viewportMocks.setCenter.mockReset();
+    viewportMocks.setViewport.mockReset();
+    viewportMocks.getViewport.mockReset();
     viewportMocks.getInternalNode.mockReset();
     viewportMocks.screenToFlowPosition.mockReset();
     flowPropMocks.panOnDrag = undefined;
     flowPropMocks.selectionOnDrag = undefined;
     flowPropMocks.lastOnNodesChange = undefined;
+    flowPropMocks.lastOnMoveEnd = undefined;
     flowPropMocks.lastNodes = undefined;
     flowPropMocks.lastEdges = undefined;
+    viewportMocks.fitView.mockResolvedValue(true);
+    viewportMocks.zoomIn.mockResolvedValue(true);
+    viewportMocks.zoomOut.mockResolvedValue(true);
+    viewportMocks.setCenter.mockResolvedValue(true);
+    viewportMocks.setViewport.mockResolvedValue(true);
+    viewportMocks.getViewport.mockReturnValue({
+      x: 48,
+      y: 64,
+      zoom: 1.5,
+    });
     viewportMocks.screenToFlowPosition.mockImplementation(
       ({ x, y }: { x: number; y: number }) => ({
         x: x / 2,
@@ -152,6 +173,7 @@ describe('CanvasPane viewport bridge', () => {
 
   it('exposes fit, zoom, center, and center-position helpers', async () => {
     let viewportApi: CanvasViewportApi | null = null;
+    const onViewportChange = vi.fn();
     const node: KnowledgeNode = {
       id: 'node_focus',
       position: { x: 120, y: 80 },
@@ -189,6 +211,7 @@ describe('CanvasPane viewport bridge', () => {
         onViewportApiReady={(api) => {
           viewportApi = api;
         }}
+        onViewportChange={onViewportChange}
         onZoomIn={() => {}}
         onZoomOut={() => {}}
       />,
@@ -229,7 +252,9 @@ describe('CanvasPane viewport bridge', () => {
     viewportApi!.zoomIn();
     viewportApi!.zoomOut();
     viewportApi!.centerOnNode(node);
+    viewportApi!.setViewport({ x: 12, y: 34, zoom: 1.2 });
     const center = viewportApi!.getCanvasCenterPosition();
+    const viewport = viewportApi!.getViewport();
 
     expect(viewportMocks.fitView).toHaveBeenCalledWith({ padding: 0.2 });
     expect(viewportMocks.zoomIn).toHaveBeenCalledWith({ duration: 180 });
@@ -242,7 +267,64 @@ describe('CanvasPane viewport bridge', () => {
       x: 310,
       y: 220,
     });
+    expect(viewportMocks.setViewport).toHaveBeenCalledWith({
+      x: 12,
+      y: 34,
+      zoom: 1.2,
+    });
     expect(center).toEqual({ x: 155, y: 110 });
+    expect(viewport).toEqual({ x: 48, y: 64, zoom: 1.5 });
+    expect(onViewportChange).not.toHaveBeenCalled();
+  });
+
+  it('forwards viewport changes from React Flow move-end events', () => {
+    const onViewportChange = vi.fn();
+
+    render(
+      <CanvasPane
+        canCenterSelected={false}
+        connectionOrientation="horizontal"
+        edgeStyle="curved"
+        currentGraphId="graph_focus"
+        editingNodeId={null}
+        edges={[]}
+        isReadOnly={false}
+        nodes={[]}
+        onCenterSelected={() => {}}
+        onCancelNodeTitleEdit={() => {}}
+        onCommitNodeTitleEdit={() => {}}
+        onConnectEdge={() => {}}
+        onCreateNode={() => {}}
+        onCreateChildNodeFromSelection={() => {}}
+        onCreateSiblingNodeFromSelection={() => {}}
+        onDeleteSelectedNodesByShortcut={() => {}}
+        onEdgesChange={() => {}}
+        onEnterLinkedGraph={() => {}}
+        onFitView={() => {}}
+        onNodesChange={() => {}}
+        onStartNodeTitleEdit={() => {}}
+        onViewportApiReady={() => {}}
+        onViewportChange={onViewportChange}
+        onZoomIn={() => {}}
+        onZoomOut={() => {}}
+      />,
+    );
+
+    expect(flowPropMocks.lastOnMoveEnd).toBeDefined();
+    (flowPropMocks.lastOnMoveEnd as (_event: unknown, viewport: unknown) => void)(
+      {},
+      {
+        x: 120,
+        y: 90,
+        zoom: 1.75,
+      },
+    );
+
+    expect(onViewportChange).toHaveBeenCalledWith({
+      x: 120,
+      y: 90,
+      zoom: 1.75,
+    });
   });
 
   it('forwards connect events and renders floating canvas controls', () => {
@@ -284,6 +366,7 @@ describe('CanvasPane viewport bridge', () => {
         onNodesChange={() => {}}
         onStartNodeTitleEdit={() => {}}
         onViewportApiReady={() => {}}
+        onViewportChange={() => {}}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
       />,
@@ -345,6 +428,7 @@ describe('CanvasPane viewport bridge', () => {
         onNodesChange={() => {}}
         onStartNodeTitleEdit={() => {}}
         onViewportApiReady={() => {}}
+        onViewportChange={() => {}}
         onZoomIn={() => {}}
         onZoomOut={() => {}}
       />,
@@ -396,6 +480,7 @@ describe('CanvasPane viewport bridge', () => {
           onNodesChange={() => {}}
           onStartNodeTitleEdit={() => {}}
           onViewportApiReady={() => {}}
+          onViewportChange={() => {}}
           onZoomIn={() => {}}
           onZoomOut={() => {}}
         />
@@ -461,6 +546,7 @@ describe('CanvasPane viewport bridge', () => {
         onNodesChange={onNodesChange}
         onStartNodeTitleEdit={() => {}}
         onViewportApiReady={() => {}}
+        onViewportChange={() => {}}
         onZoomIn={() => {}}
         onZoomOut={() => {}}
       />,
@@ -508,6 +594,7 @@ describe('CanvasPane viewport bridge', () => {
         onNodesChange={() => {}}
         onStartNodeTitleEdit={() => {}}
         onViewportApiReady={() => {}}
+        onViewportChange={() => {}}
         onZoomIn={() => {}}
         onZoomOut={() => {}}
       />,
@@ -552,6 +639,7 @@ describe('CanvasPane viewport bridge', () => {
         onNodesChange={() => {}}
         onStartNodeTitleEdit={() => {}}
         onViewportApiReady={() => {}}
+        onViewportChange={() => {}}
         onZoomIn={() => {}}
         onZoomOut={() => {}}
       />,
@@ -583,6 +671,7 @@ describe('CanvasPane viewport bridge', () => {
         onNodesChange={() => {}}
         onStartNodeTitleEdit={() => {}}
         onViewportApiReady={() => {}}
+        onViewportChange={() => {}}
         onZoomIn={() => {}}
         onZoomOut={() => {}}
       />,
@@ -636,6 +725,7 @@ describe('CanvasPane viewport bridge', () => {
         onNodesChange={() => {}}
         onStartNodeTitleEdit={() => {}}
         onViewportApiReady={() => {}}
+        onViewportChange={() => {}}
         onZoomIn={() => {}}
         onZoomOut={() => {}}
       />,
@@ -703,6 +793,7 @@ describe('CanvasPane viewport bridge', () => {
         onNodesChange={() => {}}
         onStartNodeTitleEdit={() => {}}
         onViewportApiReady={() => {}}
+        onViewportChange={() => {}}
         onZoomIn={() => {}}
         onZoomOut={() => {}}
       />,

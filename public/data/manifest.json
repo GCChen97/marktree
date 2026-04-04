@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "currentGraphId": "graph_main",
+  "currentGraphId": "graph_1775301789495_1",
   "graphOrder": [
     "graph_main",
     "graph_1775275450264_1",
@@ -11,7 +11,8 @@
     "note_flow",
     "note_markdown",
     "note_1775305150974_1",
-    "note_1775305632555_1"
+    "note_1775305632555_1",
+    "note_1775306495038_1"
   ],
   "graphs": {
     "graph_main": {
@@ -47,6 +48,10 @@
     "note_1775305632555_1": {
       "title": "VLA",
       "file": "VLA--05632555-1.md"
+    },
+    "note_1775306495038_1": {
+      "title": "SLAM",
+      "file": "SLAM--06495038-1.md"
     }
   }
 }

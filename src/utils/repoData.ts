@@ -4,6 +4,7 @@ import type {
   GraphConnectionOrientation,
   GraphEdgeStyle,
   GraphId,
+  GraphViewport,
   KnowledgeEdge,
   KnowledgeNode,
   LocalDataDirectoryState,
@@ -48,6 +49,26 @@ function normalizeEdgeStyle(style: unknown): GraphEdgeStyle | undefined {
   }
 
   return undefined;
+}
+
+function normalizeViewport(viewport: unknown): GraphViewport | undefined {
+  if (!isPlainObject(viewport)) {
+    return undefined;
+  }
+
+  if (
+    typeof viewport.x !== 'number' ||
+    typeof viewport.y !== 'number' ||
+    typeof viewport.zoom !== 'number'
+  ) {
+    return undefined;
+  }
+
+  return {
+    x: viewport.x,
+    y: viewport.y,
+    zoom: viewport.zoom,
+  };
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -203,6 +224,7 @@ function sanitizeGraphDocument(graph: GraphDocument): GraphDocument {
       graph.connectionOrientation,
     ),
     edgeStyle: normalizeEdgeStyle(graph.edgeStyle),
+    viewport: normalizeViewport(graph.viewport),
     nodes: graph.nodes.map(sanitizeNode),
     edges: graph.edges.map(sanitizeEdge),
   };
@@ -311,6 +333,7 @@ function parseGraphDocument(parsed: unknown): GraphDocument | null {
       parsed.connectionOrientation,
     ),
     edgeStyle: normalizeEdgeStyle(parsed.edgeStyle),
+    viewport: normalizeViewport(parsed.viewport),
     nodes: nodes.map(sanitizeNode),
     edges: edges.map(sanitizeEdge),
   };

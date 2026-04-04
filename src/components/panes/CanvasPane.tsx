@@ -1,5 +1,6 @@
 import {
   type Connection,
+  type OnMoveEnd,
   Position,
   ReactFlow,
   SelectionMode,
@@ -21,6 +22,7 @@ import type {
   GraphConnectionOrientation,
   GraphEdgeStyle,
   GraphId,
+  GraphViewport,
   KnowledgeEdge,
   KnowledgeNode,
 } from '../../types/graph';
@@ -44,6 +46,7 @@ type CanvasPaneProps = {
   onCreateChildNodeFromSelection: () => void;
   onDeleteSelectedNodesByShortcut: () => void;
   onViewportApiReady: (api: CanvasViewportApi | null) => void;
+  onViewportChange: (viewport: GraphViewport) => void;
   onEnterLinkedGraph: (targetGraphId: GraphId) => void;
   onFitView: () => void;
   onZoomIn: () => void;
@@ -70,13 +73,13 @@ function CanvasViewportBridge({
   useEffect(() => {
     onViewportApiReady({
       fitView: () => {
-        void reactFlow.fitView({ padding: 0.2 });
+        return reactFlow.fitView({ padding: 0.2 });
       },
       zoomIn: () => {
-        void reactFlow.zoomIn({ duration: 180 });
+        return reactFlow.zoomIn({ duration: 180 });
       },
       zoomOut: () => {
-        void reactFlow.zoomOut({ duration: 180 });
+        return reactFlow.zoomOut({ duration: 180 });
       },
       centerOnNode: (node) => {
         const internalNode = reactFlow.getInternalNode(node.id);
@@ -92,11 +95,13 @@ function CanvasViewportBridge({
           node.height ??
           0;
 
-        void reactFlow.setCenter(baseX + nodeWidth / 2, baseY + nodeHeight / 2, {
+        return reactFlow.setCenter(baseX + nodeWidth / 2, baseY + nodeHeight / 2, {
           duration: 220,
           zoom: Math.max(reactFlow.getZoom(), 1),
         });
       },
+      setViewport: (viewport) => reactFlow.setViewport(viewport),
+      getViewport: () => reactFlow.getViewport(),
       getCanvasCenterPosition: () => {
         const pane = document.querySelector(
           '.graph-canvas .react-flow__renderer',
@@ -145,6 +150,7 @@ export function CanvasPane({
   onCreateChildNodeFromSelection,
   onDeleteSelectedNodesByShortcut,
   onViewportApiReady,
+  onViewportChange,
   onEnterLinkedGraph,
   onFitView,
   onZoomIn,
@@ -271,6 +277,14 @@ export function CanvasPane({
     }
 
     onConnectEdge(connection);
+  };
+
+  const handleMoveEnd: OnMoveEnd = (_, viewport) => {
+    onViewportChange({
+      x: viewport.x,
+      y: viewport.y,
+      zoom: viewport.zoom,
+    });
   };
 
   function handleCanvasKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
@@ -406,7 +420,6 @@ export function CanvasPane({
           className="graph-canvas"
           data-testid="react-flow-canvas"
           edges={displayEdges}
-          fitView
           nodeTypes={nodeTypes}
           nodesFocusable
           nodesConnectable={!isReadOnly}
@@ -423,6 +436,7 @@ export function CanvasPane({
             }
           }}
           onNodesChange={handleNodesChange}
+          onMoveEnd={handleMoveEnd}
           onPaneClick={() => {
             surfaceRef.current?.focus();
           }}

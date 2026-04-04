@@ -4,6 +4,11 @@ export type GraphId = string;
 export type NoteId = string;
 export type GraphConnectionOrientation = 'horizontal' | 'vertical';
 export type GraphEdgeStyle = 'curved' | 'elbow';
+export type GraphViewport = {
+  x: number;
+  y: number;
+  zoom: number;
+};
 
 export type JumpLinkData = {
   targetGraphId: GraphId | null;
@@ -41,6 +46,7 @@ export type GraphDocument = {
   title: string;
   connectionOrientation?: GraphConnectionOrientation;
   edgeStyle?: GraphEdgeStyle;
+  viewport?: GraphViewport;
   nodes: KnowledgeNode[];
   edges: KnowledgeEdge[];
 };
@@ -95,10 +101,12 @@ export type GraphReferenceRecord = {
 export type GraphReferenceIndex = Record<GraphId, GraphReferenceRecord[]>;
 
 export type CanvasViewportApi = {
-  fitView: () => void;
-  zoomIn: () => void;
-  zoomOut: () => void;
-  centerOnNode: (node: KnowledgeNode) => void;
+  fitView: () => Promise<boolean>;
+  zoomIn: () => Promise<boolean>;
+  zoomOut: () => Promise<boolean>;
+  centerOnNode: (node: KnowledgeNode) => Promise<boolean>;
+  setViewport: (viewport: GraphViewport) => Promise<boolean>;
+  getViewport: () => GraphViewport;
   getCanvasCenterPosition: () => { x: number; y: number };
 };
 

@@ -3,6 +3,11 @@
   "title": "Machine Intelligent",
   "connectionOrientation": "horizontal",
   "edgeStyle": "curved",
+  "viewport": {
+    "x": 49.62215691693331,
+    "y": 198.56351139865097,
+    "zoom": 0.9820606221032757
+  },
   "nodes": [
     {
       "id": "node_graph",
@@ -81,6 +86,22 @@
         "kind": "default"
       },
       "type": "mind"
+    },
+    {
+      "id": "node_1775308039783_1",
+      "position": {
+        "x": 761.9576741219352,
+        "y": 353.77060388132656
+      },
+      "data": {
+        "title": "3DV",
+        "noteId": null,
+        "kind": "jump",
+        "jumpLink": {
+          "targetGraphId": "graph_1775301789495_1"
+        }
+      },
+      "type": "jump"
     }
   ],
   "edges": [
@@ -103,6 +124,11 @@
       "id": "edge_node_1775303409313_1_default-source_node_1775303470346_3_default-target_1775303470346",
       "source": "node_1775303409313_1",
       "target": "node_1775303470346_3"
+    },
+    {
+      "id": "edge_node_1775303470346_3_default-source_node_1775308039783_1_default-target_1775308039783",
+      "source": "node_1775303470346_3",
+      "target": "node_1775308039783_1"
     }
   ]
 }

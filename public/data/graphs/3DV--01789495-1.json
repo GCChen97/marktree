@@ -3,12 +3,17 @@
   "title": "3DV",
   "connectionOrientation": "horizontal",
   "edgeStyle": "curved",
+  "viewport": {
+    "x": 380.01555357954,
+    "y": 557.8580515065075,
+    "zoom": 1.1579387974247346
+  },
   "nodes": [
     {
       "id": "node_1775301789495_4",
       "position": {
-        "x": -60.84453688824248,
-        "y": 77.64089827324266
+        "x": -76.92631385820097,
+        "y": 29.39556736336717
       },
       "data": {
         "title": "Reconstruction",
@@ -20,8 +25,8 @@
     {
       "id": "node_1775301824232_5",
       "position": {
-        "x": -63.75184561884376,
-        "y": 307.8705215962512
+        "x": -64.90054397384078,
+        "y": 356.11585250612666
       },
       "data": {
         "title": "Generation",
@@ -34,7 +39,7 @@
       "id": "node_1775301833220_6",
       "position": {
         "x": 178.33187209448994,
-        "y": -65.90822725238077
+        "y": -67.40822725238077
       },
       "data": {
         "title": "SfM",
@@ -59,11 +64,102 @@
     {
       "id": "node_1775301880708_8",
       "position": {
-        "x": 179.9790541290251,
-        "y": 31.03122426412719
+        "x": 177.3882436244699,
+        "y": 30.1676207626088
       },
       "data": {
         "title": "SLAM",
+        "noteId": "note_1775306495038_1",
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775313048381_1",
+      "position": {
+        "x": -67.33529242814004,
+        "y": -298.1440000956025
+      },
+      "data": {
+        "title": "Representation",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775313053330_2",
+      "position": {
+        "x": 167.05124631569268,
+        "y": -299.37061427460606
+      },
+      "data": {
+        "title": "NeRF",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775313057414_3",
+      "position": {
+        "x": 175.40920926586648,
+        "y": -200.61874751671928
+      },
+      "data": {
+        "title": "3DGS",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775313078202_5",
+      "position": {
+        "x": 164.26094552697836,
+        "y": -394.5442129778911
+      },
+      "data": {
+        "title": "Point cloud",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775313159328_6",
+      "position": {
+        "x": 173.95075767116222,
+        "y": 303.8110992565713
+      },
+      "data": {
+        "title": "Autoregression",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775313164133_7",
+      "position": {
+        "x": 172.80205931616516,
+        "y": 421.51370254657724
+      },
+      "data": {
+        "title": "Diffusion",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775313196805_8",
+      "position": {
+        "x": 178.54555109115037,
+        "y": 199.81492003214942
+      },
+      "data": {
+        "title": "MAE",
         "noteId": null,
         "kind": "default"
       },
@@ -85,6 +181,36 @@
       "id": "edge_node_1775301789495_4_default-source_node_1775301880708_8_default-target_1775301880708",
       "source": "node_1775301789495_4",
       "target": "node_1775301880708_8"
+    },
+    {
+      "id": "edge_node_1775313048381_1_default-source_node_1775313053330_2_default-target_1775313053330",
+      "source": "node_1775313048381_1",
+      "target": "node_1775313053330_2"
+    },
+    {
+      "id": "edge_node_1775313048381_1_default-source_node_1775313057414_3_default-target_1775313057414",
+      "source": "node_1775313048381_1",
+      "target": "node_1775313057414_3"
+    },
+    {
+      "id": "edge_node_1775313048381_1_default-source_node_1775313078202_5_default-target_1775313078202",
+      "source": "node_1775313048381_1",
+      "target": "node_1775313078202_5"
+    },
+    {
+      "id": "edge_node_1775301824232_5_default-source_node_1775313159328_6_default-target_1775313159329",
+      "source": "node_1775301824232_5",
+      "target": "node_1775313159328_6"
+    },
+    {
+      "id": "edge_node_1775301824232_5_default-source_node_1775313164133_7_default-target_1775313164133",
+      "source": "node_1775301824232_5",
+      "target": "node_1775313164133_7"
+    },
+    {
+      "id": "edge_node_1775301824232_5_default-source_node_1775313196805_8_default-target_1775313196805",
+      "source": "node_1775301824232_5",
+      "target": "node_1775313196805_8"
     }
   ]
 }

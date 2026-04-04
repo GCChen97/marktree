@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Connection } from '@xyflow/react';
 import { MobileWorkspaceLayout } from './components/layout/MobileWorkspaceLayout';
 import { ThreePaneLayout } from './components/layout/ThreePaneLayout';
@@ -20,6 +20,7 @@ import type {
   GraphEdgeStyle,
   GraphId,
   GraphReferenceRecord,
+  GraphViewport,
   KnowledgeEdge,
   KnowledgeNode,
   NoteId,
@@ -134,6 +135,17 @@ function getDefaultEdgeStyle(
   return orientation === 'vertical' ? 'elbow' : 'curved';
 }
 
+function isSameViewport(
+  currentViewport: GraphViewport | undefined,
+  nextViewport: GraphViewport,
+) {
+  return (
+    currentViewport?.x === nextViewport.x &&
+    currentViewport?.y === nextViewport.y &&
+    currentViewport?.zoom === nextViewport.zoom
+  );
+}
+
 function App() {
   const { mode, sizes, setMode, setSizes } = usePersistentLayoutState();
   const {
@@ -159,6 +171,7 @@ function App() {
   const [importError, setImportError] = useState<string | null>(null);
   const [mobileActiveTab, setMobileActiveTab] =
     useState<MobilePaneTab>('canvas');
+  const restoredViewportKeyRef = useRef('');
   const workspaceState = useMemo(
     () => workspace ?? createDefaultWorkspaceState(),
     [workspace],
@@ -326,6 +339,31 @@ function App() {
       setActiveMarkdownId(null);
     }
   }, [activeMarkdownId, workspaceState.notes]);
+
+  useEffect(() => {
+    if (!canvasViewportApi || !currentGraph) {
+      return;
+    }
+
+    const viewportKey = currentGraph.viewport
+      ? `${currentGraph.id}:${currentGraph.viewport.x}:${currentGraph.viewport.y}:${currentGraph.viewport.zoom}`
+      : `${currentGraph.id}:fit`;
+
+    if (restoredViewportKeyRef.current === viewportKey) {
+      return;
+    }
+
+    restoredViewportKeyRef.current = viewportKey;
+
+    if (currentGraph.viewport) {
+      void canvasViewportApi.setViewport(currentGraph.viewport);
+      return;
+    }
+
+    void canvasViewportApi.fitView().then(() => {
+      handleGraphViewportChange(canvasViewportApi.getViewport());
+    });
+  }, [canvasViewportApi, currentGraph]);
 
   if (isLoading) {
     return (
@@ -533,6 +571,27 @@ function App() {
               [graph.id]: clearGraphSelectedNodes(graph),
             }
           : currentWorkspace.graphs,
+      };
+    });
+  }
+
+  function handleGraphViewportChange(viewport: GraphViewport) {
+    setWorkspace((currentWorkspace) => {
+      const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+      if (!graph || isSameViewport(graph.viewport, viewport)) {
+        return currentWorkspace;
+      }
+
+      return {
+        ...currentWorkspace,
+        graphs: {
+          ...currentWorkspace.graphs,
+          [graph.id]: {
+            ...graph,
+            viewport,
+          },
+        },
       };
     });
   }
@@ -1102,17 +1161,35 @@ function App() {
 
   function handleFitView() {
     setImportError(null);
-    canvasViewportApi?.fitView();
+    if (!canvasViewportApi) {
+      return;
+    }
+
+    void canvasViewportApi.fitView().then(() => {
+      handleGraphViewportChange(canvasViewportApi.getViewport());
+    });
   }
 
   function handleZoomIn() {
     setImportError(null);
-    canvasViewportApi?.zoomIn();
+    if (!canvasViewportApi) {
+      return;
+    }
+
+    void canvasViewportApi.zoomIn().then(() => {
+      handleGraphViewportChange(canvasViewportApi.getViewport());
+    });
   }
 
   function handleZoomOut() {
     setImportError(null);
-    canvasViewportApi?.zoomOut();
+    if (!canvasViewportApi) {
+      return;
+    }
+
+    void canvasViewportApi.zoomOut().then(() => {
+      handleGraphViewportChange(canvasViewportApi.getViewport());
+    });
   }
 
   function handleCenterSelected() {
@@ -1121,7 +1198,13 @@ function App() {
     }
 
     setImportError(null);
-    canvasViewportApi?.centerOnNode(selectedNode);
+    if (!canvasViewportApi) {
+      return;
+    }
+
+    void canvasViewportApi.centerOnNode(selectedNode).then(() => {
+      handleGraphViewportChange(canvasViewportApi.getViewport());
+    });
   }
 
   function handleExportCurrentGraph() {
@@ -1449,6 +1532,7 @@ function App() {
       onEnterLinkedGraph={handleEnterLinkedGraph}
       onFitView={handleFitView}
       onNodesChange={handleNodesChange}
+      onViewportChange={handleGraphViewportChange}
       onStartNodeTitleEdit={handleStartNodeTitleEdit}
       onCancelNodeTitleEdit={handleCancelNodeTitleEdit}
       onViewportApiReady={setCanvasViewportApi}

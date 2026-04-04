@@ -1,6 +1,6 @@
 import type { LayoutMode, LayoutState, PaneKey, PaneSizes } from '../types/layout';
 
-export const LAYOUT_STORAGE_KEY = 'mymind.phase1.layout';
+export const LAYOUT_STORAGE_KEY = 'MarkGraph.phase1.layout';
 
 export const DEFAULT_LAYOUT_STATE: LayoutState = {
   mode: 'ABC',

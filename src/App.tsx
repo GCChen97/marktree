@@ -43,6 +43,7 @@ import {
   createNoteId,
   exportCurrentGraphData,
   exportWorkspaceData,
+  findNoteIdByTitle,
   getUniqueMarkdownTitle,
   parseImportedData,
 } from './utils/graph';
@@ -255,6 +256,21 @@ function App() {
     selectedNode?.data.kind === 'jump'
       ? selectedNode.data.jumpLink?.targetGraphId ?? null
       : null;
+  const selectedJumpTargetGraphTitle =
+    selectedJumpTargetGraphId && workspaceState.graphs[selectedJumpTargetGraphId]
+      ? workspaceState.graphs[selectedJumpTargetGraphId].title
+      : null;
+  const selectedNodeMarkdownTitle =
+    selectedNode?.data.noteId && workspaceState.notes[selectedNode.data.noteId]
+      ? workspaceState.notes[selectedNode.data.noteId].title
+      : null;
+  const availableMarkdownTitles = useMemo(
+    () =>
+      workspaceState.noteOrder
+        .map((noteId) => workspaceState.notes[noteId]?.title)
+        .filter((title): title is string => Boolean(title)),
+    [workspaceState.noteOrder, workspaceState.notes],
+  );
   const currentConnectionOrientation: GraphConnectionOrientation =
     currentGraph?.connectionOrientation ?? 'horizontal';
   const currentEdgeStyle: GraphEdgeStyle =
@@ -897,8 +913,18 @@ function App() {
     });
   }
 
-  function handleSetSelectedJumpTargetGraph(targetGraphId: GraphId | null) {
+  function handleCommitSelectedJumpTargetGraph(title: string) {
     if (!selectedNode || selectedNode.data.kind !== 'jump') {
+      return;
+    }
+
+    const normalizedTitle = title.trim();
+    const targetGraphId =
+      availableJumpTargetGraphs.find(
+        (graphItem) => graphItem.title.toLocaleLowerCase() === normalizedTitle.toLocaleLowerCase(),
+      )?.id ?? null;
+
+    if (normalizedTitle && !targetGraphId) {
       return;
     }
 
@@ -920,11 +946,76 @@ function App() {
                 ? {
                     ...node,
                     data: {
-                      ...node.data,
+                    ...node.data,
                       kind: 'jump',
                       jumpLink: {
                         targetGraphId,
                       },
+                    },
+                  }
+                : node,
+            ),
+          },
+        },
+      };
+    });
+  }
+
+  function handleCommitSelectedNodeMarkdown(title: string) {
+    if (!selectedNode || isReadOnly) {
+      return;
+    }
+
+    const normalizedTitle = title.trim();
+
+    applyWorkspaceMutation((currentWorkspace) => {
+      const graph = currentWorkspace.graphs[currentWorkspace.currentGraphId];
+
+      if (!graph) {
+        return currentWorkspace;
+      }
+
+      let nextWorkspace = currentWorkspace;
+      let nextNoteId: NoteId | null = null;
+
+      if (!normalizedTitle) {
+        nextNoteId = null;
+      } else {
+        nextNoteId = findNoteIdByTitle(currentWorkspace, normalizedTitle);
+
+        if (!nextNoteId) {
+          nextNoteId = createNoteId();
+          const uniqueTitle = getUniqueMarkdownTitle(
+            currentWorkspace.notes,
+            currentWorkspace.noteOrder,
+            normalizedTitle,
+          );
+          const nextNote = createDefaultNoteForNode(nextNoteId, uniqueTitle);
+
+          nextWorkspace = {
+            ...currentWorkspace,
+            notes: {
+              ...currentWorkspace.notes,
+              [nextNoteId]: nextNote,
+            },
+            noteOrder: [...currentWorkspace.noteOrder, nextNoteId],
+          };
+        }
+      }
+
+      return {
+        ...nextWorkspace,
+        graphs: {
+          ...nextWorkspace.graphs,
+          [graph.id]: {
+            ...graph,
+            nodes: graph.nodes.map((node) =>
+              node.id === selectedNode.id
+                ? {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      noteId: nextNoteId,
                     },
                   }
                 : node,
@@ -1047,7 +1138,7 @@ function App() {
 
   function handleExportWorkspace() {
     setImportError(null);
-    downloadJson(exportWorkspaceData(workspaceState), 'mymind-workspace.json');
+    downloadJson(exportWorkspaceData(workspaceState), 'MarkGraph-workspace.json');
   }
 
   async function handleImportData(file: File) {
@@ -1273,8 +1364,11 @@ function App() {
       mode={mode}
       editingGraphId={editingGraphId}
       editingMarkdownId={editingMarkdownId}
+      selectedNodeMarkdownTitle={selectedNodeMarkdownTitle}
+      availableMarkdownTitles={availableMarkdownTitles}
       onCommitGraphRename={handleCommitGraphRename}
       onCommitMarkdownRename={handleCommitMarkdownRename}
+      onCommitSelectedNodeMarkdown={handleCommitSelectedNodeMarkdown}
       onConvertSelectedNodeToJump={handleConvertSelectedNodeToJump}
       onCreateGraph={handleCreateGraph}
       onCreateMarkdown={handleCreateMarkdown}
@@ -1299,10 +1393,11 @@ function App() {
         void syncDataDirectory();
       }}
       onSelectMarkdown={handleSelectMarkdown}
-      onSetSelectedJumpTargetGraph={handleSetSelectedJumpTargetGraph}
+      onCommitSelectedJumpTargetGraph={handleCommitSelectedJumpTargetGraph}
       onThemeToggle={toggleTheme}
       onUnsetSelectedJumpNode={handleUnsetSelectedJumpNode}
       selectedJumpTargetGraphId={selectedJumpTargetGraphId}
+      selectedJumpTargetGraphTitle={selectedJumpTargetGraphTitle}
       connectionOrientation={currentConnectionOrientation}
       edgeStyle={currentEdgeStyle}
       theme={theme}

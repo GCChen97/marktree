@@ -373,9 +373,7 @@ describe('App', () => {
     render(<App />);
 
     const jumpSwitch = screen.getByRole('switch', { name: '跳转节点' });
-    const targetGraphSelector = screen.getByRole('combobox', {
-      name: /目标 Graph/i,
-    });
+    const targetGraphSelector = screen.getByLabelText(/目标 Graph/i);
 
     expect(jumpSwitch).toBeDisabled();
     expect(targetGraphSelector).toBeDisabled();
@@ -425,15 +423,16 @@ describe('App', () => {
     fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
     fireEvent.click(screen.getByRole('switch', { name: '跳转节点' }));
 
-    const targetGraphSelector = screen.getByRole('combobox', { name: /目标 Graph/i });
+    const targetGraphSelector = screen.getByLabelText(/目标 Graph/i);
 
     expect(targetGraphSelector).toBeEnabled();
 
     fireEvent.change(targetGraphSelector, {
-      target: { value: 'graph_created' },
+      target: { value: 'Untitled Graph' },
     });
+    fireEvent.keyDown(targetGraphSelector, { key: 'Enter' });
 
-    expect(targetGraphSelector).toHaveValue('graph_created');
+    expect(targetGraphSelector).toHaveValue('Untitled Graph');
 
     createGraphIdSpy.mockRestore();
     createNodeIdSpy.mockRestore();
@@ -453,9 +452,10 @@ describe('App', () => {
     fireEvent.click(getGraphItem('Main Graph'));
     fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
     fireEvent.click(screen.getByRole('switch', { name: '跳转节点' }));
-    fireEvent.change(screen.getByRole('combobox', { name: /目标 Graph/i }), {
-      target: { value: 'graph_created' },
+    fireEvent.change(screen.getByLabelText(/目标 Graph/i), {
+      target: { value: 'Untitled Graph' },
     });
+    fireEvent.keyDown(screen.getByLabelText(/目标 Graph/i), { key: 'Enter' });
 
     await waitFor(() => {
       expect(getJumpEnterButton()).not.toBeNull();
@@ -485,9 +485,10 @@ describe('App', () => {
     fireEvent.click(getGraphItem('Main Graph'));
     fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
     fireEvent.click(screen.getByRole('switch', { name: '跳转节点' }));
-    fireEvent.change(screen.getByRole('combobox', { name: /目标 Graph/i }), {
-      target: { value: 'graph_created' },
+    fireEvent.change(screen.getByLabelText(/目标 Graph/i), {
+      target: { value: 'Untitled Graph' },
     });
+    fireEvent.keyDown(screen.getByLabelText(/目标 Graph/i), { key: 'Enter' });
 
     fireEvent.click(getGraphItem('Untitled Graph'));
     fireEvent.click(screen.getByRole('button', { name: '删除当前 Graph' }));
@@ -504,6 +505,31 @@ describe('App', () => {
 
     createGraphIdSpy.mockRestore();
     createNodeIdSpy.mockRestore();
+  });
+
+  it('associates a selected node with an existing or new markdown from the toolbar input', async () => {
+    render(<App />);
+
+    fireEvent.click(getFlowNodeByLabel('Knowledge Graph'));
+
+    const markdownInput = screen.getByLabelText('关联 Markdown');
+    fireEvent.change(markdownInput, {
+      target: { value: 'React Flow' },
+    });
+    fireEvent.keyDown(markdownInput, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(screen.getByText('note_flow')).toBeInTheDocument();
+    });
+
+    fireEvent.change(markdownInput, {
+      target: { value: 'SLAM' },
+    });
+    fireEvent.keyDown(markdownInput, { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(getMarkdownList().getByText('SLAM')).toBeInTheDocument();
+    });
   });
 
   it('creates a new node without creating markdown', () => {

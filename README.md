@@ -1,4 +1,4 @@
-# MyMind
+# MarkGraph
 
 一个基于 `Vite + React + TypeScript + React Flow` 的知识图谱工作区。
 

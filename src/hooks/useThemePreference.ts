@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ThemeMode } from '../types/theme';
 
-export const THEME_STORAGE_KEY = 'mymind.phase1.theme';
+export const THEME_STORAGE_KEY = 'MarkGraph.phase1.theme';
 
 function readStoredTheme(): ThemeMode {
   if (typeof window === 'undefined') {

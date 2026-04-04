@@ -1,4 +1,4 @@
-const DIRECTORY_HANDLE_DB = 'mymind-directory-handles';
+const DIRECTORY_HANDLE_DB = 'MarkGraph-directory-handles';
 const DIRECTORY_HANDLE_STORE = 'handles';
 const DIRECTORY_HANDLE_KEY = 'public-data-directory';
 

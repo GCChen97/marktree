@@ -67,9 +67,13 @@ type ToolbarPaneProps = {
   onCommitMarkdownRename: (noteId: NoteId, title: string) => void;
   onCreateMarkdown: () => void;
   onDeleteActiveMarkdown: () => void;
+  selectedNodeMarkdownTitle: string | null;
+  availableMarkdownTitles: string[];
+  onCommitSelectedNodeMarkdown: (title: string) => void;
   selectedJumpTargetGraphId: GraphId | null;
+  selectedJumpTargetGraphTitle: string | null;
   availableJumpTargetGraphs: Array<{ id: GraphId; title: string }>;
-  onSetSelectedJumpTargetGraph: (graphId: GraphId | null) => void;
+  onCommitSelectedJumpTargetGraph: (title: string) => void;
   connectionOrientation: GraphConnectionOrientation;
   edgeStyle: GraphEdgeStyle;
   onToggleConnectionOrientation: (
@@ -129,9 +133,13 @@ export function ToolbarPane({
   onCommitMarkdownRename,
   onCreateMarkdown,
   onDeleteActiveMarkdown,
+  selectedNodeMarkdownTitle,
+  availableMarkdownTitles,
+  onCommitSelectedNodeMarkdown,
   selectedJumpTargetGraphId,
+  selectedJumpTargetGraphTitle,
   availableJumpTargetGraphs,
-  onSetSelectedJumpTargetGraph,
+  onCommitSelectedJumpTargetGraph,
   connectionOrientation,
   edgeStyle,
   onToggleConnectionOrientation,
@@ -150,6 +158,8 @@ export function ToolbarPane({
   const [isInfoSectionExpanded, setIsInfoSectionExpanded] = useState(!isMobile);
   const [graphRenameDraft, setGraphRenameDraft] = useState('');
   const [markdownRenameDraft, setMarkdownRenameDraft] = useState('');
+  const [jumpTargetDraft, setJumpTargetDraft] = useState('');
+  const [selectedNodeMarkdownDraft, setSelectedNodeMarkdownDraft] = useState('');
 
   const currentGraphItem =
     graphItems.find((graphItem) => graphItem.isCurrent) ?? null;
@@ -175,6 +185,14 @@ export function ToolbarPane({
       setMarkdownRenameDraft('');
     }
   }, [editingMarkdownId, markdownItems, onStartMarkdownRename]);
+
+  useEffect(() => {
+    setJumpTargetDraft(selectedJumpTargetGraphTitle ?? '');
+  }, [selectedJumpTargetGraphTitle]);
+
+  useEffect(() => {
+    setSelectedNodeMarkdownDraft(selectedNodeMarkdownTitle ?? '');
+  }, [selectedNodeMarkdownTitle]);
 
   function handleListItemKeyDown(
     event: KeyboardEvent<HTMLElement>,
@@ -204,6 +222,14 @@ export function ToolbarPane({
 
     onStartMarkdownRename(noteId);
     setMarkdownRenameDraft(title);
+  }
+
+  function commitJumpTargetDraft() {
+    onCommitSelectedJumpTargetGraph(jumpTargetDraft);
+  }
+
+  function commitSelectedNodeMarkdownDraft() {
+    onCommitSelectedNodeMarkdown(selectedNodeMarkdownDraft);
   }
 
   return (
@@ -355,22 +381,68 @@ export function ToolbarPane({
             <span className="toolbar-switch__label">跳转</span>
           </label>
           <label className="toolbar-select-field toolbar-select-field--inline">
-            <select
+            <input
               aria-label="目标 Graph"
               className="toolbar-select"
+              list="jump-target-graph-options"
               disabled={isReadOnly || !canUnsetSelectedJumpNode}
-              onChange={(event) =>
-                onSetSelectedJumpTargetGraph(event.target.value || null)
-              }
-              value={selectedJumpTargetGraphId ?? ''}
-            >
-              <option value="">选择目标 Graph</option>
+              onBlur={commitJumpTargetDraft}
+              onChange={(event) => setJumpTargetDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  commitJumpTargetDraft();
+                }
+
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setJumpTargetDraft(selectedJumpTargetGraphTitle ?? '');
+                }
+              }}
+              placeholder="选择目标 Graph"
+              type="text"
+              value={jumpTargetDraft}
+            />
+            <datalist id="jump-target-graph-options">
               {availableJumpTargetGraphs.map((graphItem) => (
-                <option key={graphItem.id} value={graphItem.id}>
+                <option key={graphItem.id} value={graphItem.title}>
                   {graphItem.title}
                 </option>
               ))}
-            </select>
+            </datalist>
+          </label>
+        </div>
+        <div className="toolbar-jump-config">
+          <label className="toolbar-select-field toolbar-select-field--inline">
+            <input
+              aria-label="关联 Markdown"
+              className="toolbar-select"
+              list="selected-node-markdown-options"
+              disabled={isReadOnly || !info.selectedNodeTitle}
+              onBlur={commitSelectedNodeMarkdownDraft}
+              onChange={(event) => setSelectedNodeMarkdownDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  commitSelectedNodeMarkdownDraft();
+                }
+
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setSelectedNodeMarkdownDraft(selectedNodeMarkdownTitle ?? '');
+                }
+              }}
+              placeholder={info.selectedNodeTitle ? '选择 Markdown' : '未选择节点'}
+              type="text"
+              value={selectedNodeMarkdownDraft}
+            />
+            <datalist id="selected-node-markdown-options">
+              {availableMarkdownTitles.map((title) => (
+                <option key={title} value={title}>
+                  {title}
+                </option>
+              ))}
+            </datalist>
           </label>
         </div>
       </section>

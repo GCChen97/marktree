@@ -16,7 +16,7 @@ import {
   syncDiscoveredNotesFromDirectory,
 } from '../utils/repoData';
 
-export const WORKSPACE_STORAGE_KEY = 'mymind.phase8.workspace.legacy';
+export const WORKSPACE_STORAGE_KEY = 'MarkGraph.phase8.workspace.legacy';
 
 type PermissionMode = 'read' | 'readwrite';
 

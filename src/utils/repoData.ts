@@ -12,6 +12,7 @@ import type {
   RepoWorkspaceManifest,
   WorkspaceState,
 } from '../types/graph';
+import { createNoteId, getUniqueMarkdownTitle } from './graph';
 
 export const REPO_MANIFEST_VERSION = 1 as const;
 const DATA_DIRECTORY_NAME = 'data';
@@ -20,6 +21,20 @@ const NOTES_DIRECTORY_NAME = 'notes';
 const MANIFEST_FILE_NAME = 'manifest.json';
 const DEFAULT_GRAPH_FILE_TITLE = 'Graph';
 const DEFAULT_NOTE_FILE_TITLE = 'Markdown';
+
+type SaveWorkspaceOptions = {
+  removeAdditionalNoteFiles?: string[];
+};
+
+export type DirectoryNoteSyncResult = {
+  workspace: WorkspaceState;
+  manifest: RepoWorkspaceManifest;
+  discoveredCount: number;
+};
+
+type DirectoryHandleWithEntries = FileSystemDirectoryHandle & {
+  entries: () => AsyncIterableIterator<[string, FileSystemHandle]>;
+};
 
 function normalizeConnectionOrientation(
   orientation: unknown,
@@ -75,6 +90,17 @@ function sanitizeFileTitle(title: string, fallbackTitle: string) {
     .trim();
 
   return normalized || fallbackTitle;
+}
+
+function stripExtension(fileName: string) {
+  return fileName.replace(/\.[^.]+$/u, '');
+}
+
+function deriveNoteTitleFromFileName(fileName: string) {
+  const stem = stripExtension(fileName).trim();
+  const titledStem = stem.match(/^(.*)--[a-z0-9-]+$/i)?.[1] ?? stem;
+
+  return sanitizeFileTitle(titledStem, DEFAULT_NOTE_FILE_TITLE);
 }
 
 function buildShortId(id: string) {
@@ -482,6 +508,7 @@ export async function saveWorkspaceToDirectory(
   directoryHandle: FileSystemDirectoryHandle,
   workspace: WorkspaceState,
   previousManifest: RepoWorkspaceManifest | null,
+  options: SaveWorkspaceOptions = {},
 ) {
   const nextManifest = createManifestFromWorkspace(workspace);
   const graphsDirectoryHandle = await directoryHandle.getDirectoryHandle(
@@ -514,12 +541,15 @@ export async function saveWorkspaceToDirectory(
     nextManifest.noteOrder.map(async (noteId) => {
       const note = workspace.notes[noteId];
       const noteMeta = nextManifest.notes[noteId];
+      const previousNoteMeta = previousManifest?.notes[noteId];
 
       if (!note || !noteMeta) {
         return;
       }
 
-      await writeTextFile(notesDirectoryHandle, noteMeta.file, note.content);
+      if (!previousNoteMeta || previousNoteMeta.file !== noteMeta.file) {
+        await writeTextFile(notesDirectoryHandle, noteMeta.file, note.content);
+      }
     }),
   );
 
@@ -546,10 +576,92 @@ export async function saveWorkspaceToDirectory(
       .filter((fileName) => !nextNoteFiles.has(fileName))
       .map((fileName) => removeFileIfExists(notesDirectoryHandle, fileName)),
   );
+  await Promise.all(
+    (options.removeAdditionalNoteFiles ?? []).map((fileName) =>
+      removeFileIfExists(notesDirectoryHandle, fileName),
+    ),
+  );
 
   await writeJsonFile(directoryHandle, MANIFEST_FILE_NAME, nextManifest);
 
   return nextManifest;
+}
+
+export async function syncDiscoveredNotesFromDirectory(
+  directoryHandle: FileSystemDirectoryHandle,
+  workspace: WorkspaceState,
+  manifest: RepoWorkspaceManifest | null,
+): Promise<DirectoryNoteSyncResult> {
+  const notesDirectoryHandle = (await directoryHandle.getDirectoryHandle(
+    NOTES_DIRECTORY_NAME,
+    { create: true },
+  )) as DirectoryHandleWithEntries;
+  const knownNoteFiles = new Set(
+    Object.values(manifest?.notes ?? {}).map((note) => note.file.toLocaleLowerCase()),
+  );
+  const extraNoteFilesToRemove: string[] = [];
+  let nextWorkspace = workspace;
+  let discoveredCount = 0;
+
+  for await (const [fileName, handle] of notesDirectoryHandle.entries()) {
+    if (
+      handle.kind !== 'file' ||
+      !fileName.toLocaleLowerCase().endsWith('.md') ||
+      knownNoteFiles.has(fileName.toLocaleLowerCase())
+    ) {
+      continue;
+    }
+
+    const file = await (handle as FileSystemFileHandle).getFile();
+    const content = await file.text();
+
+    if (isHtmlDocumentContent(content)) {
+      continue;
+    }
+
+    const noteId = createNoteId();
+    const title = getUniqueMarkdownTitle(
+      nextWorkspace.notes,
+      nextWorkspace.noteOrder,
+      deriveNoteTitleFromFileName(fileName),
+    );
+
+    nextWorkspace = {
+      ...nextWorkspace,
+      notes: {
+        ...nextWorkspace.notes,
+        [noteId]: {
+          id: noteId,
+          title,
+          content,
+        },
+      },
+      noteOrder: [...nextWorkspace.noteOrder, noteId],
+    };
+    extraNoteFilesToRemove.push(fileName);
+    discoveredCount += 1;
+  }
+
+  if (discoveredCount === 0) {
+    return {
+      workspace,
+      manifest: manifest ?? createManifestFromWorkspace(workspace),
+      discoveredCount: 0,
+    };
+  }
+
+  const nextManifest = await saveWorkspaceToDirectory(
+    directoryHandle,
+    nextWorkspace,
+    manifest,
+    { removeAdditionalNoteFiles: extraNoteFilesToRemove },
+  );
+
+  return {
+    workspace: nextWorkspace,
+    manifest: nextManifest,
+    discoveredCount,
+  };
 }
 
 export function getDefaultLocalDataDirectoryState(): LocalDataDirectoryState {
@@ -557,5 +669,6 @@ export function getDefaultLocalDataDirectoryState(): LocalDataDirectoryState {
     hasWritableDirectory: false,
     directoryName: null,
     lastError: null,
+    lastSyncMessage: null,
   };
 }

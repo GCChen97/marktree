@@ -13,6 +13,7 @@ import {
   getDefaultLocalDataDirectoryState,
   loadRepoWorkspace,
   saveWorkspaceToDirectory,
+  syncDiscoveredNotesFromDirectory,
 } from '../utils/repoData';
 
 export const WORKSPACE_STORAGE_KEY = 'mymind.phase8.workspace.legacy';
@@ -61,6 +62,9 @@ export function usePersistentWorkspaceState() {
   const directoryHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
   const manifestRef = useRef<RepoWorkspaceManifest | null>(null);
   const skipNextAutoSaveRef = useRef(true);
+  const syncInProgressRef = useRef(false);
+  const syncedDirectoryVersionRef = useRef(0);
+  const [directoryHandleVersion, setDirectoryHandleVersion] = useState(0);
 
   useEffect(() => {
     if (initialWorkspace) {
@@ -124,7 +128,9 @@ export function usePersistentWorkspaceState() {
           hasWritableDirectory: true,
           directoryName: directoryHandle.name,
           lastError: null,
+          lastSyncMessage: null,
         });
+        setDirectoryHandleVersion((currentValue) => currentValue + 1);
       })
       .catch(() => {
         setLocalDataDirectoryState(getDefaultLocalDataDirectoryState());
@@ -188,6 +194,71 @@ export function usePersistentWorkspaceState() {
     void saveWorkspaceNow();
   }, [saveWorkspaceNow, workspace]);
 
+  const syncDataDirectory = useCallback(async () => {
+    if (
+      !import.meta.env.DEV ||
+      !workspace ||
+      !directoryHandleRef.current ||
+      syncInProgressRef.current
+    ) {
+      return 0;
+    }
+
+    syncInProgressRef.current = true;
+
+    try {
+      const result = await syncDiscoveredNotesFromDirectory(
+        directoryHandleRef.current,
+        workspace,
+        manifestRef.current,
+      );
+
+      if (result.discoveredCount > 0) {
+        skipNextAutoSaveRef.current = true;
+        manifestRef.current = result.manifest;
+        setManifest(result.manifest);
+        setWorkspace(result.workspace);
+      }
+
+      setLocalDataDirectoryState((currentState) => ({
+        ...currentState,
+        lastError: null,
+        lastSyncMessage:
+          result.discoveredCount > 0
+            ? `已同步 ${result.discoveredCount} 个新的 Markdown 文件。`
+            : currentState.lastSyncMessage,
+      }));
+
+      return result.discoveredCount;
+    } catch (error) {
+      setLocalDataDirectoryState((currentState) => ({
+        ...currentState,
+        lastError:
+          error instanceof Error ? error.message : '同步目录失败。',
+      }));
+
+      return 0;
+    } finally {
+      syncInProgressRef.current = false;
+    }
+  }, [workspace]);
+
+  useEffect(() => {
+    if (
+      !import.meta.env.DEV ||
+      !workspace ||
+      !directoryHandleRef.current ||
+      directoryHandleVersion === 0 ||
+      syncedDirectoryVersionRef.current === directoryHandleVersion
+    ) {
+      return;
+    }
+
+    void syncDataDirectory().then(() => {
+      syncedDirectoryVersionRef.current = directoryHandleVersion;
+    });
+  }, [directoryHandleVersion, syncDataDirectory, workspace]);
+
   const selectDataDirectory = useCallback(async () => {
     const pickerWindow = window as WindowWithDirectoryPicker;
 
@@ -200,6 +271,7 @@ export function usePersistentWorkspaceState() {
         hasWritableDirectory: false,
         directoryName: null,
         lastError: '当前浏览器不支持目录写入。',
+        lastSyncMessage: null,
       });
       return false;
     }
@@ -220,6 +292,7 @@ export function usePersistentWorkspaceState() {
           hasWritableDirectory: false,
           directoryName: null,
           lastError: '目录写入权限未授予。',
+          lastSyncMessage: null,
         });
         return false;
       }
@@ -231,7 +304,10 @@ export function usePersistentWorkspaceState() {
         hasWritableDirectory: true,
         directoryName: directoryHandle.name,
         lastError: null,
+        lastSyncMessage: null,
       });
+      syncedDirectoryVersionRef.current = 0;
+      setDirectoryHandleVersion((currentValue) => currentValue + 1);
 
       return true;
     } catch (error) {
@@ -240,6 +316,7 @@ export function usePersistentWorkspaceState() {
         directoryName: null,
         lastError:
           error instanceof Error ? error.message : '选择目录失败。',
+        lastSyncMessage: null,
       });
 
       return false;
@@ -271,5 +348,6 @@ export function usePersistentWorkspaceState() {
     localDataDirectoryState,
     selectDataDirectory,
     saveWorkspaceNow,
+    syncDataDirectory,
   };
 }

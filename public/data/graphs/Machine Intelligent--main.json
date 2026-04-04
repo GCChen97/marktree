@@ -1,0 +1,108 @@
+{
+  "id": "graph_main",
+  "title": "Machine Intelligent",
+  "connectionOrientation": "horizontal",
+  "edgeStyle": "curved",
+  "nodes": [
+    {
+      "id": "node_graph",
+      "position": {
+        "x": 95.10086346266235,
+        "y": 246.02807052117225
+      },
+      "data": {
+        "title": "Knowledge Graph",
+        "noteId": "note_graph",
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_flow",
+      "position": {
+        "x": 331.7930065250437,
+        "y": 245.47248821618487
+      },
+      "data": {
+        "title": "React Flow",
+        "noteId": "note_flow",
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_markdown",
+      "position": {
+        "x": 572.1916421305639,
+        "y": 240.76221045528416
+      },
+      "data": {
+        "title": "Markdown Pane",
+        "noteId": "note_markdown",
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775303409313_1",
+      "position": {
+        "x": 276.5891498232895,
+        "y": 529.8499782857949
+      },
+      "data": {
+        "title": "Deep Neural Network",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775303454246_2",
+      "position": {
+        "x": 43.15196244434101,
+        "y": 529.8499782857948
+      },
+      "data": {
+        "title": "Machine Intelligent",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775303470346_3",
+      "position": {
+        "x": 519.5071146655264,
+        "y": 425.1666854335569
+      },
+      "data": {
+        "title": "Spatial Intelligent",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_graph_flow",
+      "source": "node_graph",
+      "target": "node_flow"
+    },
+    {
+      "id": "edge_flow_markdown",
+      "source": "node_flow",
+      "target": "node_markdown"
+    },
+    {
+      "id": "edge_node_1775303454246_2_default-source_node_1775303409313_1_default-target_1775303465948",
+      "source": "node_1775303454246_2",
+      "target": "node_1775303409313_1"
+    },
+    {
+      "id": "edge_node_1775303409313_1_default-source_node_1775303470346_3_default-target_1775303470346",
+      "source": "node_1775303409313_1",
+      "target": "node_1775303470346_3"
+    }
+  ]
+}

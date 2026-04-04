@@ -1,0 +1,90 @@
+{
+  "id": "graph_1775301789495_1",
+  "title": "3DV",
+  "connectionOrientation": "horizontal",
+  "edgeStyle": "curved",
+  "nodes": [
+    {
+      "id": "node_1775301789495_4",
+      "position": {
+        "x": -60.84453688824248,
+        "y": 77.64089827324266
+      },
+      "data": {
+        "title": "Reconstruction",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775301824232_5",
+      "position": {
+        "x": -63.75184561884376,
+        "y": 307.8705215962512
+      },
+      "data": {
+        "title": "Generation",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775301833220_6",
+      "position": {
+        "x": 178.33187209448994,
+        "y": -65.90822725238077
+      },
+      "data": {
+        "title": "SfM",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775301841900_7",
+      "position": {
+        "x": 175.86109904268721,
+        "y": 122.44982718082781
+      },
+      "data": {
+        "title": "Feed-forward",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775301880708_8",
+      "position": {
+        "x": 179.9790541290251,
+        "y": 31.03122426412719
+      },
+      "data": {
+        "title": "SLAM",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_node_1775301789495_4_default-source_node_1775301833220_6_default-target_1775301833220",
+      "source": "node_1775301789495_4",
+      "target": "node_1775301833220_6"
+    },
+    {
+      "id": "edge_node_1775301789495_4_default-source_node_1775301841900_7_default-target_1775301841900",
+      "source": "node_1775301789495_4",
+      "target": "node_1775301841900_7"
+    },
+    {
+      "id": "edge_node_1775301789495_4_default-source_node_1775301880708_8_default-target_1775301880708",
+      "source": "node_1775301789495_4",
+      "target": "node_1775301880708_8"
+    }
+  ]
+}

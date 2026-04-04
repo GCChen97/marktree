@@ -3,23 +3,28 @@
   "currentGraphId": "graph_main",
   "graphOrder": [
     "graph_main",
-    "graph_1775274598199_1"
+    "graph_1775275450264_1",
+    "graph_1775301789495_1"
   ],
   "noteOrder": [
     "note_graph",
     "note_flow",
     "note_markdown",
-    "note_1775274598199_1",
-    "note_1775274805860_2"
+    "note_1775305150974_1",
+    "note_1775305632555_1"
   ],
   "graphs": {
     "graph_main": {
-      "title": "Main Graph",
-      "file": "Main Graph--main.json"
+      "title": "Machine Intelligent",
+      "file": "Machine Intelligent--main.json"
     },
-    "graph_1775274598199_1": {
-      "title": "Untitled Graph",
-      "file": "Untitled Graph--74598199-1.json"
+    "graph_1775275450264_1": {
+      "title": "RL",
+      "file": "RL--75450264-1.json"
+    },
+    "graph_1775301789495_1": {
+      "title": "3DV",
+      "file": "3DV--01789495-1.json"
     }
   },
   "notes": {
@@ -35,13 +40,13 @@
       "title": "Markdown Pane",
       "file": "Markdown Pane--markdown.md"
     },
-    "note_1775274598199_1": {
-      "title": "Start",
-      "file": "Start--74598199-1.md"
+    "note_1775305150974_1": {
+      "title": "VLN",
+      "file": "VLN--05150974-1.md"
     },
-    "note_1775274805860_2": {
-      "title": "Untitled",
-      "file": "Untitled--74805860-2.md"
+    "note_1775305632555_1": {
+      "title": "VLA",
+      "file": "VLA--05632555-1.md"
     }
   }
 }

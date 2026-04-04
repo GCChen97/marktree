@@ -79,8 +79,10 @@ type ToolbarPaneProps = {
   canSaveDataFiles: boolean;
   directoryName: string | null;
   directoryError: string | null;
+  directoryStatusMessage: string | null;
   onSelectDataDirectory: () => void;
   onSaveDataFiles: () => void;
+  onSyncDataDirectory: () => void;
   importError: string | null;
   isMobile?: boolean;
 };
@@ -137,8 +139,10 @@ export function ToolbarPane({
   canSaveDataFiles,
   directoryName,
   directoryError,
+  directoryStatusMessage,
   onSelectDataDirectory,
   onSaveDataFiles,
+  onSyncDataDirectory,
   importError,
   isMobile = false,
 }: ToolbarPaneProps) {
@@ -410,6 +414,14 @@ export function ToolbarPane({
                 <button
                   className="toolbar-action-button"
                   disabled={!canSaveDataFiles}
+                  onClick={onSyncDataDirectory}
+                  type="button"
+                >
+                  同步目录
+                </button>
+                <button
+                  className="toolbar-action-button"
+                  disabled={!canSaveDataFiles}
                   onClick={onSaveDataFiles}
                   type="button"
                 >
@@ -441,6 +453,9 @@ export function ToolbarPane({
               : '本地作者模式：先选择一次 `public/data` 目录，之后即可把当前图谱改动直接写回仓库文件。'
             : '只读模式：当前内容直接来自仓库里的静态 graph / note 文件。'}
         </p>
+        {directoryStatusMessage ? (
+          <p className="toolbar-feedback">{directoryStatusMessage}</p>
+        ) : null}
         {directoryError ? <p className="toolbar-feedback">{directoryError}</p> : null}
         {importError ? <p className="toolbar-feedback">{importError}</p> : null}
       </section>

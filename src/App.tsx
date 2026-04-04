@@ -145,6 +145,7 @@ function App() {
     localDataDirectoryState,
     selectDataDirectory,
     saveWorkspaceNow,
+    syncDataDirectory,
   } = usePersistentWorkspaceState();
   const { viewportMode, isMobile } = useResponsiveMode();
   const { theme, toggleTheme } = useThemePreference();
@@ -1257,6 +1258,7 @@ function App() {
       dataMode={dataMode}
       directoryError={localDataDirectoryState.lastError}
       directoryName={localDataDirectoryState.directoryName}
+      directoryStatusMessage={localDataDirectoryState.lastSyncMessage}
       graphItems={graphItems}
       importError={importError}
       info={{
@@ -1292,6 +1294,9 @@ function App() {
       onSelectGraph={handleSelectGraph}
       onSelectDataDirectory={() => {
         void selectDataDirectory();
+      }}
+      onSyncDataDirectory={() => {
+        void syncDataDirectory();
       }}
       onSelectMarkdown={handleSelectMarkdown}
       onSetSelectedJumpTargetGraph={handleSetSelectedJumpTargetGraph}

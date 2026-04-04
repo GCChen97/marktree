@@ -82,6 +82,7 @@ export type LocalDataDirectoryState = {
   hasWritableDirectory: boolean;
   directoryName: string | null;
   lastError: string | null;
+  lastSyncMessage: string | null;
 };
 
 export type GraphReferenceRecord = {

@@ -197,6 +197,7 @@ describe('App', () => {
     render(<App />);
 
     expect(screen.getByRole('button', { name: '选择目录' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '同步目录' })).toBeDisabled();
     expect(screen.getByRole('button', { name: '立即保存' })).toBeDisabled();
     expect(
       screen.getByText(/先选择一次 `public\/data` 目录/i),

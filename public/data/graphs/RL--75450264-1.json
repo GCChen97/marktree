@@ -1,0 +1,76 @@
+{
+  "id": "graph_1775275450264_1",
+  "title": "RL",
+  "connectionOrientation": "horizontal",
+  "nodes": [
+    {
+      "id": "node_1775275450264_2",
+      "position": {
+        "x": -92.14918369368593,
+        "y": 13.401794495962172
+      },
+      "data": {
+        "title": "RL",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775301751403_1",
+      "position": {
+        "x": 161.02827258259526,
+        "y": -72.49595982093113
+      },
+      "data": {
+        "title": "log derivative trick",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775301767503_2",
+      "position": {
+        "x": 161.02827258259526,
+        "y": 47.504040179068866
+      },
+      "data": {
+        "title": "PPO",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775301770767_3",
+      "position": {
+        "x": 161.02827258259526,
+        "y": 167.50404017906885
+      },
+      "data": {
+        "title": "GRPO",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_node_1775275450264_2_default-source_node_1775301751403_1_default-target_1775301751403",
+      "source": "node_1775275450264_2",
+      "target": "node_1775301751403_1"
+    },
+    {
+      "id": "edge_node_1775275450264_2_default-source_node_1775301767503_2_default-target_1775301767503",
+      "source": "node_1775275450264_2",
+      "target": "node_1775301767503_2"
+    },
+    {
+      "id": "edge_node_1775275450264_2_default-source_node_1775301770767_3_default-target_1775301770767",
+      "source": "node_1775275450264_2",
+      "target": "node_1775301770767_3"
+    }
+  ]
+}

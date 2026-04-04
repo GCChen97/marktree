@@ -121,12 +121,12 @@ describe('App', () => {
     expect(screen.getByText('Graph 管理')).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: /夜晚主题/i })).toBeInTheDocument();
     expect(
-      screen.getByText('Markdown 管理').compareDocumentPosition(
-        screen.getByText('Graph 管理'),
+      screen.getByText('Graph 管理').compareDocumentPosition(
+        screen.getByText('Markdown 管理'),
       ) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      screen.getByText('Graph 管理').compareDocumentPosition(
+      screen.getByText('Markdown 管理').compareDocumentPosition(
         screen.getByText('信息区'),
       ) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();

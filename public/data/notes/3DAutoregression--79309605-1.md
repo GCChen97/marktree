@@ -6,7 +6,6 @@
 - 解藕几何和特征的解码, 交替输出position token和feature tokens, position head单独解码occupied voxel的位置
 - 4D RoPE, 3D for position, 1D for token type
 - 序列化是直接xyz.flatten(), 不用z/hilbert曲线, 实验表明用flatten最好, z次之, hilbert最差.猜测是flatten比较规律好学. 但是看交叉熵, 三者差别并不大.
- - 序列化是直接xyz.flatten(), 不用z/hilbert曲线, 实验表明用flatten最好, z次之, hilbert最差.猜测是flatten比较规律好学. 但是看交叉熵, 三者差别并不大.
 - 自回归的transformer直接用GPT-2, voxel size是20cm, 上下文窗口16384 for scene, 8192 for object.
 
 | **Ordering Strategy** | **Train CE ↓** | **Val CE ↓** |

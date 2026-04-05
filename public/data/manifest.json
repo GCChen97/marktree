@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "currentGraphId": "graph_main",
+  "currentGraphId": "graph_1775301789495_1",
   "graphOrder": [
     "graph_main",
     "graph_1775275450264_1",
@@ -14,7 +14,9 @@
     "note_1775305632555_1",
     "note_1775306495038_1",
     "note_1775317156295_1",
-    "note_1775379309605_1"
+    "note_1775379309605_1",
+    "note_1775394385070_1",
+    "note_1775396820460_1"
   ],
   "graphs": {
     "graph_main": {
@@ -62,6 +64,14 @@
     "note_1775379309605_1": {
       "title": "3DAutoregression",
       "file": "3DAutoregression--79309605-1.md"
+    },
+    "note_1775394385070_1": {
+      "title": "3DReconFeedforward",
+      "file": "3DReconFeedforward--94385070-1.md"
+    },
+    "note_1775396820460_1": {
+      "title": "4DReconFeedforward",
+      "file": "4DReconFeedforward--96820460-1.md"
     }
   }
 }

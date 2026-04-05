@@ -326,129 +326,125 @@ export function CanvasPane({
 
   return (
     <div
-      className="pane-content pane-content--canvas"
+      className="canvas-surface"
       data-mobile={isMobile}
+      data-testid="graph-canvas-surface"
+      onKeyDown={handleCanvasKeyDown}
+      onMouseDownCapture={(event) => {
+        if (!isTypingTarget(event.target)) {
+          surfaceRef.current?.focus();
+        }
+      }}
+      ref={surfaceRef}
+      tabIndex={0}
     >
-      <div
-        className="canvas-surface"
-        data-testid="graph-canvas-surface"
-        onKeyDown={handleCanvasKeyDown}
-        onMouseDownCapture={(event) => {
-          if (!isTypingTarget(event.target)) {
-            surfaceRef.current?.focus();
+      <div className="canvas-controls" data-mobile={isMobile}>
+        <button
+          aria-label="Fit View"
+          className="canvas-control-button"
+          onClick={onFitView}
+          title="Fit View"
+          type="button"
+        >
+          <svg aria-hidden="true" className="canvas-control-button__icon" viewBox="0 0 16 16">
+            <path
+              d="M5 2.75H2.75V5M11 2.75h2.25V5M5 13.25H2.75V11M11 13.25h2.25V11"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.35"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Zoom In"
+          className="canvas-control-button"
+          onClick={onZoomIn}
+          title="Zoom In"
+          type="button"
+        >
+          <svg aria-hidden="true" className="canvas-control-button__icon" viewBox="0 0 16 16">
+            <path
+              d="M7.25 4.75v5.5M4.5 7.5H10M10.75 10.75l2.75 2.75M7.25 11.25a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.35"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Zoom Out"
+          className="canvas-control-button"
+          onClick={onZoomOut}
+          title="Zoom Out"
+          type="button"
+        >
+          <svg aria-hidden="true" className="canvas-control-button__icon" viewBox="0 0 16 16">
+            <path
+              d="M4.5 7.5H10M10.75 10.75l2.75 2.75M7.25 11.25a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.35"
+            />
+          </svg>
+        </button>
+        <button
+          aria-label="Center Selected"
+          className="canvas-control-button"
+          disabled={!canCenterSelected}
+          onClick={onCenterSelected}
+          title="Center Selected"
+          type="button"
+        >
+          <svg aria-hidden="true" className="canvas-control-button__icon" viewBox="0 0 16 16">
+            <path
+              d="M8 2.25v2M8 11.75v2M2.25 8h2M11.75 8h2M8 10.75a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5Z"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.35"
+            />
+          </svg>
+        </button>
+      </div>
+      <ReactFlow<KnowledgeNode, KnowledgeEdge>
+        className="graph-canvas"
+        data-testid="react-flow-canvas"
+        edges={displayEdges}
+        nodeTypes={nodeTypes}
+        nodesFocusable
+        nodesConnectable={!isReadOnly}
+        nodesDraggable={!isReadOnly}
+        nodes={displayNodes}
+        onConnect={handleConnect}
+        onEdgesChange={handleEdgesChange}
+        onNodeClick={(_, node) => {
+          surfaceRef.current?.focus();
+        }}
+        onNodeDoubleClick={(_, node) => {
+          if (!isReadOnly) {
+            onStartNodeTitleEdit(node.id);
           }
         }}
-        ref={surfaceRef}
-        tabIndex={0}
+        onNodesChange={handleNodesChange}
+        onMoveEnd={handleMoveEnd}
+        onPaneClick={() => {
+          surfaceRef.current?.focus();
+        }}
+        panOnDrag={[1, 2]}
+        selectNodesOnDrag={false}
+        selectionMode={SelectionMode.Partial}
+        selectionOnDrag
+        proOptions={{ hideAttribution: true }}
       >
-        <div className="canvas-controls" data-mobile={isMobile}>
-          <button
-            aria-label="Fit View"
-            className="canvas-control-button"
-            onClick={onFitView}
-            title="Fit View"
-            type="button"
-          >
-            <svg aria-hidden="true" className="canvas-control-button__icon" viewBox="0 0 16 16">
-              <path
-                d="M5 2.75H2.75V5M11 2.75h2.25V5M5 13.25H2.75V11M11 13.25h2.25V11"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.35"
-              />
-            </svg>
-          </button>
-          <button
-            aria-label="Zoom In"
-            className="canvas-control-button"
-            onClick={onZoomIn}
-            title="Zoom In"
-            type="button"
-          >
-            <svg aria-hidden="true" className="canvas-control-button__icon" viewBox="0 0 16 16">
-              <path
-                d="M7.25 4.75v5.5M4.5 7.5H10M10.75 10.75l2.75 2.75M7.25 11.25a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.35"
-              />
-            </svg>
-          </button>
-          <button
-            aria-label="Zoom Out"
-            className="canvas-control-button"
-            onClick={onZoomOut}
-            title="Zoom Out"
-            type="button"
-          >
-            <svg aria-hidden="true" className="canvas-control-button__icon" viewBox="0 0 16 16">
-              <path
-                d="M4.5 7.5H10M10.75 10.75l2.75 2.75M7.25 11.25a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.35"
-              />
-            </svg>
-          </button>
-          <button
-            aria-label="Center Selected"
-            className="canvas-control-button"
-            disabled={!canCenterSelected}
-            onClick={onCenterSelected}
-            title="Center Selected"
-            type="button"
-          >
-            <svg aria-hidden="true" className="canvas-control-button__icon" viewBox="0 0 16 16">
-              <path
-                d="M8 2.25v2M8 11.75v2M2.25 8h2M11.75 8h2M8 10.75a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5Z"
-                fill="none"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.35"
-              />
-            </svg>
-          </button>
-        </div>
-        <ReactFlow<KnowledgeNode, KnowledgeEdge>
-          className="graph-canvas"
-          data-testid="react-flow-canvas"
-          edges={displayEdges}
-          nodeTypes={nodeTypes}
-          nodesFocusable
-          nodesConnectable={!isReadOnly}
-          nodesDraggable={!isReadOnly}
-          nodes={displayNodes}
-          onConnect={handleConnect}
-          onEdgesChange={handleEdgesChange}
-          onNodeClick={(_, node) => {
-            surfaceRef.current?.focus();
-          }}
-          onNodeDoubleClick={(_, node) => {
-            if (!isReadOnly) {
-              onStartNodeTitleEdit(node.id);
-            }
-          }}
-          onNodesChange={handleNodesChange}
-          onMoveEnd={handleMoveEnd}
-          onPaneClick={() => {
-            surfaceRef.current?.focus();
-          }}
-          panOnDrag={[1, 2]}
-          selectNodesOnDrag={false}
-          selectionMode={SelectionMode.Partial}
-          selectionOnDrag
-          proOptions={{ hideAttribution: true }}
-        >
-          <CanvasViewportBridge onViewportApiReady={onViewportApiReady} />
-        </ReactFlow>
-      </div>
+        <CanvasViewportBridge onViewportApiReady={onViewportApiReady} />
+      </ReactFlow>
     </div>
   );
 }

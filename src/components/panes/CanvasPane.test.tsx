@@ -604,6 +604,45 @@ describe('CanvasPane viewport bridge', () => {
     expect(flowPropMocks.panOnDrag).toEqual([1, 2]);
   });
 
+  it('renders canvas surface as pane root without pane-content wrapper', () => {
+    const { container } = render(
+      <CanvasPane
+        canCenterSelected={false}
+        connectionOrientation="horizontal"
+        edgeStyle="curved"
+        currentGraphId="graph_focus"
+        editingNodeId={null}
+        edges={[]}
+        isReadOnly={false}
+        nodes={[]}
+        onCenterSelected={() => {}}
+        onCancelNodeTitleEdit={() => {}}
+        onCommitNodeTitleEdit={() => {}}
+        onConnectEdge={() => {}}
+        onCreateNode={() => {}}
+        onCreateChildNodeFromSelection={() => {}}
+        onCreateSiblingNodeFromSelection={() => {}}
+        onDeleteSelectedNodesByShortcut={() => {}}
+        onEdgesChange={() => {}}
+        onEnterLinkedGraph={() => {}}
+        onFitView={() => {}}
+        onNodesChange={() => {}}
+        onStartNodeTitleEdit={() => {}}
+        onViewportApiReady={() => {}}
+        onViewportChange={() => {}}
+        onZoomIn={() => {}}
+        onZoomOut={() => {}}
+      />,
+    );
+
+    const surface = screen.getByTestId('graph-canvas-surface');
+    const root = container.firstElementChild as HTMLElement;
+
+    expect(root.className).toContain('canvas-surface');
+    expect(root.className).not.toContain('pane-content');
+    expect(surface.className).toContain('canvas-surface');
+  });
+
   it('keeps the canvas surface focusable after inline title editing ends', () => {
     const node: KnowledgeNode = {
       id: 'node_focus',

@@ -820,4 +820,25 @@ describe('App', () => {
     expect(screen.getByText('未关联 Markdown')).toBeInTheDocument();
     expect(screen.getByText('当前节点还没有关联 markdown。')).toBeInTheDocument();
   });
+
+  it('renders markdown shell as pane root without pane-content wrapper', () => {
+    const selectedNode: KnowledgeNode = {
+      id: 'node_unlinked',
+      position: { x: 0, y: 0 },
+      data: {
+        title: 'Unlinked Note',
+        noteId: null,
+        kind: 'default',
+      },
+    };
+
+    const { container } = render(
+      <MarkdownPane selectedNode={selectedNode} selectedNote={null} />,
+    );
+
+    const root = container.firstElementChild as HTMLElement;
+
+    expect(root.className).toContain('markdown-shell');
+    expect(root.className).not.toContain('pane-content');
+  });
 });

@@ -4,9 +4,9 @@
   "connectionOrientation": "horizontal",
   "edgeStyle": "curved",
   "viewport": {
-    "x": 216.01555357953998,
-    "y": 570.8580515065075,
-    "zoom": 1.1579387974247346
+    "x": 313.1511204971748,
+    "y": 527.6438566221126,
+    "zoom": 1.157938797424734
   },
   "nodes": [
     {
@@ -134,7 +134,7 @@
       },
       "data": {
         "title": "Autoregression",
-        "noteId": null,
+        "noteId": "note_1775379309605_1",
         "kind": "default"
       },
       "type": "mind"

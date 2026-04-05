@@ -5,6 +5,7 @@ import type { KnowledgeNode } from '../../types/graph';
 export function MindNode({ id, data }: NodeProps<KnowledgeNode>) {
   const [draftTitle, setDraftTitle] = useState(data.title);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const hasLinkedMarkdown = Boolean(data.noteId);
   const targetGraphId = data.jumpLink?.targetGraphId ?? null;
   const isJumpNode = data.kind === 'jump';
   const connectionOrientation = data.connectionOrientation ?? 'horizontal';
@@ -45,6 +46,20 @@ export function MindNode({ id, data }: NodeProps<KnowledgeNode>) {
         type="target"
       />
       <div className="mind-node__header">
+        {hasLinkedMarkdown ? (
+          <span aria-label="已关联 markdown" className="mind-node__note-indicator" role="img">
+            <svg
+              aria-hidden="true"
+              className="mind-node__note-indicator-icon"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M6 3.75a2.25 2.25 0 0 0-2.25 2.25v12A2.25 2.25 0 0 0 6 20.25h6.879a2.25 2.25 0 0 0 1.59-.659l4.122-4.122a2.25 2.25 0 0 0 .659-1.59V6A2.25 2.25 0 0 0 17 3.75H6Zm0 1.5h11A.75.75 0 0 1 17.75 6v7h-3.5a2.25 2.25 0 0 0-2.25 2.25v3.5H6a.75.75 0 0 1-.75-.75V6A.75.75 0 0 1 6 5.25Zm7.5 12.44v-2.44c0-.414.336-.75.75-.75h2.44l-3.19 3.19Z"
+                fill="currentColor"
+              />
+            </svg>
+          </span>
+        ) : null}
         {data.isEditingTitle ? (
           <input
             autoFocus

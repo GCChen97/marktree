@@ -976,6 +976,21 @@ button {
   gap: 8px;
 }
 
+.mind-node__note-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: color-mix(in srgb, var(--accent) 58%, var(--text-muted));
+}
+
+.mind-node__note-indicator-icon {
+  width: 16px;
+  height: 16px;
+}
+
 .jump-node__target-row {
   display: flex;
   align-items: center;
@@ -984,6 +999,7 @@ button {
 
 .mind-node__title {
   flex: 1;
+  min-width: 0;
   font-size: 0.96rem;
   font-weight: 700;
   line-height: 1.35;
@@ -992,6 +1008,7 @@ button {
 
 .mind-node__title-input {
   flex: 1;
+  min-width: 0;
   width: 100%;
   padding: 6px 8px;
   border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--line));

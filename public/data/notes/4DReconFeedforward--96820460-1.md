@@ -2,7 +2,7 @@
 
 # 4D 重建论文汇总对比
 
-Flow3R,4RC和D4RT都做了跟踪,跟踪信号不管是光流还是point tracks都需要真值.
+Flow4R,4RC和D4RT都做了跟踪,跟踪信号不管是光流还是point tracks都需要真值.
 
 4RC输出的是pixel-wise信息, D4RT只根据query输出相应的信息, D4RT是无法做外插的, 只能是在输入的camera idx里查询点信息.
 

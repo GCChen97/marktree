@@ -7,6 +7,7 @@
 - 4D RoPE, 3D for position, 1D for token type
 - 序列化是直接xyz.flatten(), 不用z/hilbert曲线, 实验表明用flatten最好, z次之, hilbert最差.猜测是flatten比较规律好学. 但是看交叉熵, 三者差别并不大.
 - 自回归的transformer直接用GPT-2, voxel size是20cm, 上下文窗口16384 for scene, 8192 for object.
+- 注意力经过causal mask, 跟语言生成一样, 因此可以把不完整的场景作为prompt做推理实现场景补全.
 
 | **Ordering Strategy** | **Train CE ↓** | **Val CE ↓** |
 |---|---:|---:|

@@ -1,0 +1,100 @@
+{
+  "id": "graph_1775475849063_1",
+  "title": "Generation",
+  "connectionOrientation": "horizontal",
+  "edgeStyle": "curved",
+  "viewport": {
+    "x": -65.64473814047324,
+    "y": 239.3731449426872,
+    "zoom": 1.0281138266560663
+  },
+  "nodes": [
+    {
+      "id": "node_1775475849063_1",
+      "position": {
+        "x": 133.71097136728056,
+        "y": 195.7499166343863
+      },
+      "data": {
+        "title": "Video",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775475873790_2",
+      "position": {
+        "x": 399.97265494741225,
+        "y": 17.144847778814587
+      },
+      "data": {
+        "title": "Teacher Forcing",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775475888510_3",
+      "position": {
+        "x": 399.97265494741225,
+        "y": 137.14484777881458
+      },
+      "data": {
+        "title": "Diffusion Forcing",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775475895054_4",
+      "position": {
+        "x": 399.97265494741225,
+        "y": 257.14484777881455
+      },
+      "data": {
+        "title": "Self Forcing",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1775475900922_5",
+      "position": {
+        "x": 399.97265494741225,
+        "y": 377.14484777881455
+      },
+      "data": {
+        "title": "Causal Forcing",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_node_1775475849063_1_default-source_node_1775475873790_2_default-target_1775475873790",
+      "source": "node_1775475849063_1",
+      "target": "node_1775475873790_2"
+    },
+    {
+      "id": "edge_node_1775475849063_1_default-source_node_1775475888510_3_default-target_1775475888510",
+      "source": "node_1775475849063_1",
+      "target": "node_1775475888510_3"
+    },
+    {
+      "id": "edge_node_1775475849063_1_default-source_node_1775475895054_4_default-target_1775475895054",
+      "source": "node_1775475849063_1",
+      "target": "node_1775475895054_4"
+    },
+    {
+      "id": "edge_node_1775475849063_1_default-source_node_1775475900922_5_default-target_1775475900922",
+      "source": "node_1775475849063_1",
+      "target": "node_1775475900922_5"
+    }
+  ]
+}

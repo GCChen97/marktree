@@ -447,6 +447,25 @@ function App() {
   }
 
   function handleNodesChange(nodes: KnowledgeNode[]) {
+    if (isReadOnly) {
+      setWorkspace((currentWorkspace) => {
+        const graph = currentWorkspace?.graphs[currentWorkspace.currentGraphId];
+
+        if (!currentWorkspace || !graph) {
+          return currentWorkspace ?? createDefaultWorkspaceState();
+        }
+
+        return {
+          ...currentWorkspace,
+          graphs: {
+            ...currentWorkspace.graphs,
+            [graph.id]: { ...graph, nodes },
+          },
+        };
+      });
+      return;
+    }
+
     updateCurrentGraphNodes(nodes);
   }
 

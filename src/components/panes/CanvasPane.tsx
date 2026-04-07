@@ -257,6 +257,12 @@ export function CanvasPane({
 
   const handleNodesChange: OnNodesChange<KnowledgeNode> = (changes) => {
     if (isReadOnly) {
+      const selectionChanges = changes.filter((c) => c.type === 'select');
+
+      if (selectionChanges.length > 0) {
+        onNodesChange(applyNodeChanges(selectionChanges, nodes));
+      }
+
       return;
     }
 
@@ -424,7 +430,7 @@ export function CanvasPane({
         nodes={displayNodes}
         onConnect={handleConnect}
         onEdgesChange={handleEdgesChange}
-        onNodeClick={(_, node) => {
+        onNodeClick={() => {
           surfaceRef.current?.focus();
         }}
         onNodeDoubleClick={(_, node) => {

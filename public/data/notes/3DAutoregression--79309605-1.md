@@ -1,4 +1,7 @@
 
+
+
+
 # GaussianGPT ECCV26*
 
 ## 网络和表征
@@ -26,3 +29,12 @@
 - 使用teach forcing
 - 由于使用VQVAE, 因此训练只需要使用交叉熵损失
 - 训练资源消耗不算很大Autoencoder training uses 4 RTX A6000 GPUs, with an effective batch size of 8 for scenes and 24 for objects. Transformer training uses 4 GH200 GPUs with an effective batch size of 64. We train the autoencoder for around 4 days on scenes and 2 days on PhotoShape. GPT training takes around 1 day on scenes and 4.5 hours on PhotoShape.
+
+
+
+# FACE CVPR26?
+FACE: A Face-based Autoregressive Representation for High-Fidelity and  Efficient Mesh Generation\
+
+- 一个token对应一个三角形, 三个顶点9个数值编码成一个embeddings.
+- 解码的时候用Causal MLP使每个三角形的生成都取决于已生成的三角形.
+- 三角形的排序根据数值最小的顶点的坐标排序, 实际上就是直接对[N, xyz]的tensor排序, 朴素单有效.

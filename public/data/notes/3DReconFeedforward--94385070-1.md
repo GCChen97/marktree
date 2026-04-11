@@ -1,5 +1,13 @@
 # 3DReconFeedforward
 
+## Pi3
+pi3不使用DPT解码, 其decoder使用transformer+MLP+pixel unshuffle, 因此输出的point map边缘锐利.
+
+## DA v3
+- 直接估计scale-shift-invariant depth, depth 表示在log空间从而降低平衡远近的loss大小.
+- 没有pi3的permutation-invariant性质
+- Dual-DPT, assemble之后两个分支, 一个decode depth, 一个decode 6 dims depth ray map.
+
 ## 长序列优化
 这7个方法本质上围绕同一个瓶颈——VGGT 的全局注意力是 O(N²L²) 的，从三条不同路线突破：
 

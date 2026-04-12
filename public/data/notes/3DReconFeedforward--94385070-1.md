@@ -1,5 +1,14 @@
 # 3DReconFeedforward
 
+## LagerNVS
+- VGGT的后续, 专注NVS任务. VGGT作为scene tokens编码器
+- 最后的frame&global embeddings拼接为2048维投影到768给解码器
+- 额外12层decoder blk作为解码器
+- query是ray map编码成的embeddings
+- output是直接rearrage为image patch, 无DPT
+- 再pixel space用diffusion loss微调解码器实现生成
+- 数据集都是静态的，无人无动态. 对高频率细节效果也不好.
+
 ## Pi3
 pi3不使用DPT解码, 其decoder使用transformer+MLP+pixel unshuffle, 因此输出的point map边缘锐利.
 

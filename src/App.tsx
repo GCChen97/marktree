@@ -151,6 +151,7 @@ function App() {
   const {
     workspace,
     setWorkspace,
+    manifest,
     isLoading,
     loadError,
     dataMode,
@@ -215,6 +216,9 @@ function App() {
 
     return workspaceState.notes[noteId] ?? null;
   }, [activeMarkdownId, selectedNode, workspaceState.notes]);
+  const selectedNoteFileName = selectedNote
+    ? manifest?.notes[selectedNote.id]?.file ?? null
+    : null;
 
   const graphItems = useMemo(
     () =>
@@ -1570,6 +1574,7 @@ function App() {
       isMobile={isMobile}
       selectedNode={selectedNode}
       selectedNote={selectedNote}
+      selectedNoteFileName={selectedNoteFileName}
     />
   );
 

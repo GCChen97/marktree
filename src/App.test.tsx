@@ -9,7 +9,7 @@ import App from './App';
 import { MarkdownPane } from './components/panes/MarkdownPane';
 import { LAYOUT_STORAGE_KEY } from './utils/layout';
 import { THEME_STORAGE_KEY } from './hooks/useThemePreference';
-import type { KnowledgeNode } from './types/graph';
+import type { KnowledgeNode, NoteRecord } from './types/graph';
 import * as graphUtils from './utils/graph';
 
 function expectPaneOrder(testIds: string[]) {
@@ -840,5 +840,47 @@ describe('App', () => {
 
     expect(root.className).toContain('markdown-shell');
     expect(root.className).not.toContain('pane-content');
+  });
+
+  it('resolves relative html image paths from the selected note file', () => {
+    const selectedNote: NoteRecord = {
+      id: 'note_generation',
+      title: 'Generation',
+      content: '<img src="../figures/image.png" alt="alt text" width="400" />',
+    };
+
+    render(
+      <MarkdownPane
+        selectedNode={null}
+        selectedNote={selectedNote}
+        selectedNoteFileName="Generation--43569847-1.md"
+      />,
+    );
+
+    const image = screen.getByAltText('alt text');
+
+    expect(image).toHaveAttribute('src', '/marktree/data/figures/image.png');
+    expect(image).toHaveAttribute('width', '400');
+  });
+
+  it('keeps absolute markdown image urls unchanged', () => {
+    const selectedNote: NoteRecord = {
+      id: 'note_remote',
+      title: 'Remote image',
+      content: '![remote](https://example.com/image.png)',
+    };
+
+    render(
+      <MarkdownPane
+        selectedNode={null}
+        selectedNote={selectedNote}
+        selectedNoteFileName="Remote--note.md"
+      />,
+    );
+
+    expect(screen.getByAltText('remote')).toHaveAttribute(
+      'src',
+      'https://example.com/image.png',
+    );
   });
 });

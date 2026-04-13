@@ -4,9 +4,9 @@
   "connectionOrientation": "horizontal",
   "edgeStyle": "curved",
   "viewport": {
-    "x": 15.622156916933363,
-    "y": 103.56351139865092,
-    "zoom": 0.9820606221032757
+    "x": -8.442477709866466,
+    "y": -43.839327064433405,
+    "zoom": 1.1598063877828875
   },
   "nodes": [
     {
@@ -89,6 +89,19 @@
         }
       },
       "type": "jump"
+    },
+    {
+      "id": "node_1776078092756_1",
+      "position": {
+        "x": 305.86486854523145,
+        "y": 663.3363296923258
+      },
+      "data": {
+        "title": "Generation",
+        "noteId": "note_1775543569847_1",
+        "kind": "default"
+      },
+      "type": "mind"
     }
   ],
   "edges": [

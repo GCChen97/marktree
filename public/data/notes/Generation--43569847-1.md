@@ -61,6 +61,9 @@ x_hat = decoder(z)
 
 recon_loss = MSE(x_hat, x)
 ```
+<p align="center">
+  <img src="../figures/reparam_trick.png" alt="alt text" width="500" />
+</p>
 
 # Video Diffusion
 

@@ -341,6 +341,7 @@ export function usePersistentWorkspaceState() {
   return {
     workspace,
     setWorkspace: updateWorkspace,
+    manifest,
     isLoading,
     loadError,
     dataMode,

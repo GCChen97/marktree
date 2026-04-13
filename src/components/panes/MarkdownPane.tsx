@@ -1,14 +1,49 @@
 import ReactMarkdown from 'react-markdown';
 import rehypeKatex from 'rehype-katex';
+import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import type { KnowledgeNode, NoteRecord } from '../../types/graph';
+
+const ABSOLUTE_OR_SPECIAL_IMAGE_SRC_PATTERN =
+  /^(?:[a-z][a-z\d+.-]*:|\/\/|\/|#)/i;
+
+function encodePathSegment(segment: string) {
+  return encodeURIComponent(segment).replace(/%2F/g, '/');
+}
+
+function resolveMarkdownImageSrc(
+  src: string | undefined,
+  noteFileName: string | null | undefined,
+) {
+  if (
+    !src ||
+    !noteFileName ||
+    ABSOLUTE_OR_SPECIAL_IMAGE_SRC_PATTERN.test(src) ||
+    typeof window === 'undefined'
+  ) {
+    return src;
+  }
+
+  try {
+    const noteUrl = new URL(
+      `${import.meta.env.BASE_URL}data/notes/${encodePathSegment(noteFileName)}`,
+      window.location.origin,
+    );
+    const imageUrl = new URL(src, noteUrl);
+
+    return `${imageUrl.pathname}${imageUrl.search}${imageUrl.hash}`;
+  } catch {
+    return src;
+  }
+}
 
 type MarkdownPaneProps = {
   selectedNode: KnowledgeNode | null;
   selectedNote: NoteRecord | null;
   hasMultipleSelection?: boolean;
   isMobile?: boolean;
+  selectedNoteFileName?: string | null;
 };
 
 export function MarkdownPane({
@@ -16,6 +51,7 @@ export function MarkdownPane({
   selectedNote,
   hasMultipleSelection = false,
   isMobile = false,
+  selectedNoteFileName = null,
 }: MarkdownPaneProps) {
   const markdownTitle =
     selectedNote?.title ?? selectedNode?.data.title ?? '未选择 Markdown';
@@ -50,7 +86,17 @@ export function MarkdownPane({
         ) : (
           <article className="markdown-prose" data-testid="markdown-prose">
             <ReactMarkdown
-              rehypePlugins={[rehypeKatex]}
+              components={{
+                img({ node: _node, src, ...props }) {
+                  return (
+                    <img
+                      {...props}
+                      src={resolveMarkdownImageSrc(src, selectedNoteFileName)}
+                    />
+                  );
+                },
+              }}
+              rehypePlugins={[rehypeRaw, rehypeKatex]}
               remarkPlugins={[remarkGfm, remarkMath]}
             >
               {selectedNote.content}

@@ -50,6 +50,17 @@ $$
 \end{aligned}
 $$
 由于 $\log p(x|z)\propto -\|x-\hat{x}\|^2$, 所以最终计算loss都是用MSE loss+KL loss, 二者的权重取决于是重重建还是重latent, diffusion中重建好不意味着生成就好.
+代码实现:
+```python
+mu, logvar = encoder(x)
+
+eps = torch.randn_like(mu)
+z = mu + sigma * eps   # 因为已经是无偏估计且会计算一整个batch, 所以只采样一次, 多次采样受益不大.
+
+x_hat = decoder(z)
+
+recon_loss = MSE(x_hat, x)
+```
 
 # Video Diffusion
 

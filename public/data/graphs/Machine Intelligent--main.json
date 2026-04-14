@@ -4,9 +4,9 @@
   "connectionOrientation": "horizontal",
   "edgeStyle": "curved",
   "viewport": {
-    "x": -8.442477709866466,
-    "y": -43.839327064433405,
-    "zoom": 1.1598063877828875
+    "x": 41.12332471295025,
+    "y": 146.03861947955488,
+    "zoom": 0.9820606221032754
   },
   "nodes": [
     {
@@ -99,9 +99,12 @@
       "data": {
         "title": "Generation",
         "noteId": "note_1775543569847_1",
-        "kind": "default"
+        "kind": "jump",
+        "jumpLink": {
+          "targetGraphId": "graph_1775475849063_1"
+        }
       },
-      "type": "mind"
+      "type": "jump"
     }
   ],
   "edges": [

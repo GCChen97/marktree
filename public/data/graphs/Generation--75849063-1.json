@@ -4,9 +4,9 @@
   "connectionOrientation": "horizontal",
   "edgeStyle": "curved",
   "viewport": {
-    "x": -18.307472522346842,
-    "y": 376.2737136800398,
-    "zoom": 1.028113826656066
+    "x": 50.75179318204812,
+    "y": 535.7427042575798,
+    "zoom": 0.7371346086455502
   },
   "nodes": [
     {
@@ -73,6 +73,71 @@
         "kind": "default"
       },
       "type": "mind"
+    },
+    {
+      "id": "node_1776992499158_1",
+      "position": {
+        "x": 117.50398583323442,
+        "y": -224.94952181730318
+      },
+      "data": {
+        "title": "Diffusion",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1776992507909_2",
+      "position": {
+        "x": 362.3672605702958,
+        "y": -304.34378603682177
+      },
+      "data": {
+        "title": "DDPM",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1776992510613_3",
+      "position": {
+        "x": 371.1211550970064,
+        "y": -144.46493319291807
+      },
+      "data": {
+        "title": "Flow matching",
+        "noteId": "note_1776992606043_1",
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1776992526969_5",
+      "position": {
+        "x": 613.8343637519017,
+        "y": -141.1329053534179
+      },
+      "data": {
+        "title": "Mean flow",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
+    },
+    {
+      "id": "node_1776992532236_6",
+      "position": {
+        "x": 611.0021891387684,
+        "y": -67.25745248663875
+      },
+      "data": {
+        "title": "Improved Mean Flow",
+        "noteId": null,
+        "kind": "default"
+      },
+      "type": "mind"
     }
   ],
   "edges": [
@@ -95,6 +160,26 @@
       "id": "edge_node_1775475849063_1_default-source_node_1775475900922_5_default-target_1775475900922",
       "source": "node_1775475849063_1",
       "target": "node_1775475900922_5"
+    },
+    {
+      "id": "edge_node_1776992499158_1_default-source_node_1776992507909_2_default-target_1776992507910",
+      "source": "node_1776992499158_1",
+      "target": "node_1776992507909_2"
+    },
+    {
+      "id": "edge_node_1776992499158_1_default-source_node_1776992510613_3_default-target_1776992510613",
+      "source": "node_1776992499158_1",
+      "target": "node_1776992510613_3"
+    },
+    {
+      "id": "edge_node_1776992510613_3_default-source_node_1776992526969_5_default-target_1776992526969",
+      "source": "node_1776992510613_3",
+      "target": "node_1776992526969_5"
+    },
+    {
+      "id": "edge_node_1776992526969_5_default-source_node_1776992532236_6_default-target_1776992532237",
+      "source": "node_1776992526969_5",
+      "target": "node_1776992532236_6"
     }
   ]
 }

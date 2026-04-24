@@ -65,6 +65,13 @@ recon_loss = MSE(x_hat, x)
   <img src="../figures/reparam_trick.png" alt="alt text" width="500" />
 </p>
 
+## Condition Injection
+### Channel Concat
+可参考marigold和instructPix2Pix的实现.
+参考图直接concat到被去噪的噪声图上, 这样diff model的输入通道数是输出通道数的两倍. 在LDM里, 参考图经过同一个VAE得到latent然后直接拼接到噪声latent, 微调DiT时把输入通道的权重复制一份除以2, 实现双倍通道输入, 单倍通道输出.
+instructPix2Pix里复用stable diffusion, 输入通道的新增通道对应的新的卷积参数被设为零.
+
+
 # Video Diffusion
 
 ## Teacher Forcing

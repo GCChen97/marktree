@@ -1,8 +1,15 @@
 # 3DReconFeedforward
 
+## TokenGS CVPR26
+- 每个token直接解码8x8个高斯
+- 约束每个高斯至少出现在一个view中, 用ReLU(归一化坐标)
+
+## GlobalSplat CVPR26
+- 每个token解码成多个高斯, 在训练过程中先合并多个高斯的表示, 后期逐渐放松约束让每个高斯差异化.
+
 ## LagerNVS
 - VGGT的后续, 专注NVS任务. VGGT作为scene tokens编码器
-- 最后的frame&global embeddings拼接为2048维投影到768给解码器
+- VGGT最后的frame&global embeddings拼接为2048维投影到768给解码器
 - 额外12层decoder blk作为解码器
 - query是ray map编码成的embeddings
 - output是直接rearrage为image patch, 无DPT
@@ -10,7 +17,8 @@
 - 数据集都是静态的，无人无动态. 对高频率细节效果也不好.
 
 ## Pi3
-pi3不使用DPT解码, 其decoder使用transformer+MLP+pixel unshuffle, 因此输出的point map边缘锐利.
+- pi3不使用DPT解码, 其decoder使用transformer+MLP+pixel unshuffle, 因此输出的point map边缘锐利.
+- 但是pixel unshuffle导致输出的pointmap有网格纹, pi3x里用moge v2的conv_head, 它的convtranspose2d被初始化成直接复制低分辨率的特征到2x2,产生一个最近邻采样的效果, 减少了插值带来的混叠, 并且pi3只用一层token解码深度,因此也没有多层token混合导致的不确定性, 最后是log depth的输出也可能有帮助. 参考claude的说法, 是因为最近邻采样这个初始化策略让模型优先用最近邻采样并微调, 比从随机初始化学到近似最近邻更容易. DPT的上采样是双线性插值, 不可避免的有连续性.
 
 ## DA v3
 - 直接估计scale-shift-invariant depth, depth 表示在log空间从而降低平衡远近的loss大小.
@@ -24,7 +32,7 @@ pi3不使用DPT解码, 其decoder使用transformer+MLP+pixel unshuffle, 因此�
 2. **分块+外部对齐**（VGGT-X、VGGT-Long、VGGT-SLAM 2.0）：保持原始模型不变，在外部用 pose graph / 回环闭合拼接子地图，工程实用性强但多为离线。
 3. **改造为流式架构**（InfiniteVGGT、LoGeR）：从模型层面重新设计，InfiniteVGGT 用因果 KV 缓存，LoGeR 用 TTT 记忆，是走得最远的两个方向。
 
-Mem3R/Scal3R/ZipMap/VGGT-long
+Mem3R/Scal3R/ZipMap/VGGT-long/PAS3R/Lingbot-Map
 
 | 方法 | 发表时间 | 类型 | 核心长序列策略 | 具体技术手段 | 内存/计算优化 | 局限 & 适用场景 | 支持规模 |
 |---|---|---|---|---|---|---|---|

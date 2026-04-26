@@ -1,5 +1,10 @@
 # 3DReconFeedforward
 
+## NOVA3R
+用flow matching训练一个autoencoder, 亮点:
+- 输入是点的编码拼接learnable token得到2C维特征, 再线性投影到C维. 注意, 输入是固定从N个点采样M个点, 因此learnable tokens也是M个.
+- 跟GeomDist和Apple的"3D Shape Tokenization via Latent Flow Matching"每个点都是独立计算的网络设计不同, nova3r会通过cross attention以点集作为KV更新Q, Q再通过cross atention作为KV更新点集, 因此点与点之间有间接交互. 至于为什么能实现不同数量的点的推理, 可能是因为cross attention里的 $\sqrt{d}$ 因子消除掉了点数量的影响, 使得训练时固定点数量的模型也能适应不同点数量的输入. 也许就是点用了self attention也可以支持动态数量输入, 但是计算代价太大了.
+
 ## TokenGS CVPR26
 - 每个token直接解码8x8个高斯
 - 约束每个高斯至少出现在一个view中, 用ReLU(归一化坐标)

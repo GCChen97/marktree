@@ -20,7 +20,8 @@
     "note_1775396820460_1",
     "note_1775543569847_1",
     "note_1776150727096_1",
-    "note_1776992606043_1"
+    "note_1776992606043_1",
+    "note_1779894476266_1"
   ],
   "graphs": {
     "graph_main": {
@@ -92,6 +93,10 @@
     "note_1776992606043_1": {
       "title": "Flow matching",
       "file": "Flow matching--92606043-1.md"
+    },
+    "note_1779894476266_1": {
+      "title": "Diffusion",
+      "file": "Diffusion--94476266-1.md"
     }
   }
 }

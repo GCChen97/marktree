@@ -37,7 +37,7 @@
 2. **分块+外部对齐**（VGGT-X、VGGT-Long、VGGT-SLAM 2.0）：保持原始模型不变，在外部用 pose graph / 回环闭合拼接子地图，工程实用性强但多为离线。
 3. **改造为流式架构**（InfiniteVGGT、LoGeR）：从模型层面重新设计，InfiniteVGGT 用因果 KV 缓存，LoGeR 用 TTT 记忆，是走得最远的两个方向。
 
-Mem3R/Scal3R/ZipMap/VGGT-long/PAS3R/Lingbot-Map
+Mem3R/Scal3R/ZipMap/VGGT-long/PAS3R/Lingbot-Map/HorizonStream/Lite3R
 
 | 方法 | 发表时间 | 类型 | 核心长序列策略 | 具体技术手段 | 内存/计算优化 | 局限 & 适用场景 | 支持规模 |
 |---|---|---|---|---|---|---|---|

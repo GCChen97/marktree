@@ -71,6 +71,9 @@ recon_loss = MSE(x_hat, x)
 参考图直接concat到被去噪的噪声图上, 这样diff model的输入通道数是输出通道数的两倍. 在LDM里, 参考图经过同一个VAE得到latent然后直接拼接到噪声latent, 微调DiT时把输入通道的权重复制一份除以2, 实现双倍通道输入, 单倍通道输出.
 instructPix2Pix里复用stable diffusion, 输入通道的新增通道对应的新的卷积参数被设为零.
 
+### adaLN
+FiLM的实现, 通过一个MLP把条件信息映射成每个层的scale和shift, 直接作用在被去噪的特征上. 这种方法的好处是参数量小, 不需要修改原有模型结构, 但是可能会有表达能力不足的问题.
+
 
 # Video Diffusion
 

@@ -1,15 +1,5 @@
 # Generation
 
-## Geometric Latent Diffusion (GLD) ECCV26*
-Repurposing Geometric Foundation Models for  Multi-view Diffusion
-- Reuse the latent space of the intermediate features of a 3D foundation model for diffusion.
-- Generate multi-view features conditioned on the features of partial views and decode them into RGB/Depth.
-
-## VFMF: World Modeling by Forecasting Vision Foundation Model Features 2025
-- 用VAE再次压缩DINO特征到更小维度从而训练生成模型, TC-AE也有一样的操作. 重建与生成对特征维度的长短要求是相反的.
-
-## RAE
-
 ## VAE
 拟合一个分布从而实现生成, 通过最大化数据的似然:
 $$
@@ -65,6 +55,27 @@ recon_loss = MSE(x_hat, x)
   <img src="../figures/reparam_trick.png" alt="alt text" width="500" />
 </p>
 
+## KL Divergence
+
+$$
+D_{KL}(P\|Q) = \mathbb{E}_{x\sim P(x)}\left[\log\frac{P(x)}{Q(x)}\right] = \int P(x)\log\frac{P(x)}{Q(x)}dx
+$$
+基于Jensen不等式
+$$
+\mathbb{E}_{x\sim P(x)}\left[\log\frac{P(x)}{Q(x)}\right] \ge \log\mathbb{E}_{x\sim P(x)}\left[\frac{P(x)}{Q(x)}\right] = \log\int P(x)\cdot\frac{P(x)}{Q(x)}dx = 0
+$$
+
+## Geometric Latent Diffusion (GLD) ECCV26*
+Repurposing Geometric Foundation Models for  Multi-view Diffusion
+- Reuse the latent space of the intermediate features of a 3D foundation model for diffusion.
+- Generate multi-view features conditioned on the features of partial views and decode them into RGB/Depth.
+
+## VFMF: World Modeling by Forecasting Vision Foundation Model Features 2025
+- 用VAE再次压缩DINO特征到更小维度从而训练生成模型, TC-AE也有一样的操作. 重建与生成对特征维度的长短要求是相反的.
+
+## RAE
+
+
 ## Condition Injection
 ### Channel Concat
 可参考marigold和instructPix2Pix的实现.
@@ -75,6 +86,16 @@ instructPix2Pix里复用stable diffusion, 输入通道的新增通道对应的�
 FiLM的实现, 通过一个MLP把条件信息映射成每个层的scale和shift, 直接作用在被去噪的特征上. 这种方法的好处是参数量小, 不需要修改原有模型结构, 但是可能会有表达能力不足的问题.
 
 
+# One-step Generation
+
+## DMD (diffusion model distillation, CVPR24, Tianwei Yin)
+用KL divergence + regression loss
+
+### KL divergence loss
+
+
+### Regression loss
+
 # Video Diffusion
 
 ## Teacher Forcing
@@ -84,3 +105,6 @@ FiLM的实现, 通过一个MLP把条件信息映射成每个层的scale和shift,
 ## Self Foring
 
 ## Causal Forcing
+
+## Causal Generation
+一般先把bidirectional的模型训练好, 然后再训成自回归，接着蒸馏成少步甚至一步的模型. 训练过程中可以使用teacher forcing, diffusion forcing, self forcing, causal forcing等不同的策略.

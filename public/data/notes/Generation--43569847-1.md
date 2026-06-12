@@ -60,9 +60,14 @@ recon_loss = MSE(x_hat, x)
 $$
 D_{KL}(P\|Q) = \mathbb{E}_{x\sim P(x)}\left[\log\frac{P(x)}{Q(x)}\right] = \int P(x)\log\frac{P(x)}{Q(x)}dx
 $$
-基于Jensen不等式
+基于 $\log t\le t-1$
 $$
-\mathbb{E}_{x\sim P(x)}\left[\log\frac{P(x)}{Q(x)}\right] \ge \log\mathbb{E}_{x\sim P(x)}\left[\frac{P(x)}{Q(x)}\right] = \log\int P(x)\cdot\frac{P(x)}{Q(x)}dx = 0
+\mathbb{E}_{x\sim P(x)}\left[\log\frac{P(x)}{Q(x)}\right]
+=\int P(x)\log\frac{P(x)}{Q(x)}dx
+\ge \int P(x)\left(\frac{Q(x)}{P(x)}-1\right)dx
+=
+\int Q(x)dx - \int P(x)dx
+=1-1=0
 $$
 
 ## Geometric Latent Diffusion (GLD) ECCV26*
